@@ -124,15 +124,94 @@ INSERT INTO categories (name, icon, description) VALUES
 
 ## Step 5: Enable Row Level Security (RLS)
 
-1. Go to **Authentication > Policies** in Supabase
-2. For each table, click "Enable RLS"
-3. Add policy to allow public read:
-   ```sql
-   CREATE POLICY "Allow public read" 
-   ON listings FOR SELECT 
-   TO public 
-   USING (true);
-   ```
+RLS позволява публичен достъп за читане (всеки може да вижда обяви), но само логнали потребители могат да пишат.
+
+### Опция 1: Чрез SQL (най-бързо)
+
+Изпълнете следния SQL в **SQL Editor**:
+
+```sql
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+-- Policy for listings: Anyone can READ
+CREATE POLICY "Allow public read listings"
+ON listings FOR SELECT
+TO public
+USING (true);
+
+-- Policy for listings: Only owner can UPDATE/DELETE
+CREATE POLICY "Allow owner to update own listings"
+ON listings FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow owner to delete own listings"
+ON listings FOR DELETE
+TO authenticated
+USING (auth.uid() = user_id);
+
+-- Policy for listings: Only authenticated can INSERT
+CREATE POLICY "Allow authenticated to insert listings"
+ON listings FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+-- Policy for users: Anyone can READ
+CREATE POLICY "Allow public read users"
+ON users FOR SELECT
+TO public
+USING (true);
+
+-- Policy for users: Only own user can UPDATE
+CREATE POLICY "Allow user to update own profile"
+ON users FOR UPDATE
+TO authenticated
+USING (auth.uid() = id);
+
+-- Policy for messages: Only sender/receiver can READ
+CREATE POLICY "Users can read own messages"
+ON messages FOR SELECT
+TO authenticated
+USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+-- Policy for reviews: Anyone can READ
+CREATE POLICY "Allow public read reviews"
+ON reviews FOR SELECT
+TO public
+USING (true);
+```
+
+### Опция 2: Чрез UI (ако искаш да видиш графично)
+
+1. **Отвори Supabase Dashboard**
+2. Върви до **Authentication > Policies**
+3. За таблица **listings**:
+   - Щракни **"Enable RLS"**
+   - Щракни **"New Policy"**
+   - Избери **"For SELECT"** → **"public"**
+   - Щракни **"Create Policy"**
+
+4. За таблица **users**:
+   - Щракни **"Enable RLS"**
+   - Щракни **"New Policy"**
+   - Избери **"For SELECT"** → **"public"**
+   - Щракни **"Create Policy"**
+
+5. За таблица **reviews**:
+   - Щракни **"Enable RLS"**
+   - Щракни **"New Policy"**
+   - Избери **"For SELECT"** → **"public"**
+   - Щракни **"Create Policy"**
+
+### ✅ Проверка дали работи:
+
+1. Отвори приложението на `http://localhost:5173`
+2. Отвори **Обяви** страница
+3. Ако виждаш обяви = ✅ RLS работи правилно!
 
 ## Step 6: Test Connection
 
