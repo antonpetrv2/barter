@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.91.0",
     "bootstrap": "^5.3.8",
     "vite": "^7.3.1"
   }

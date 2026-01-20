@@ -1,7 +1,9 @@
 /**
  * Authentication Page
- * Login and Registration forms
+ * Login and Registration forms with Supabase integration
  */
+
+import { authService, isSupabaseConnected } from '../services/supabaseService.js'
 
 export function renderAuth() {
     const content = document.getElementById('content')
@@ -10,6 +12,15 @@ export function renderAuth() {
         <div class="container py-5">
             <div class="row">
                 <div class="col-md-8 offset-md-2">
+                    ${!isSupabaseConnected() ? `
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Demo режим!</strong> Supabase не е конфигуриран. 
+                            За реална функционалност, конфигурирай .env.local с твоите Supabase API ключове.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    ` : ''}
+
                     <ul class="nav nav-tabs mb-4" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">
@@ -44,9 +55,10 @@ export function renderAuth() {
                                                 Запомни ме
                                             </label>
                                         </div>
-                                        <button type="submit" class="btn btn-primary w-100">
+                                        <button type="submit" class="btn btn-primary w-100" id="loginBtn">
                                             <i class="bi bi-box-arrow-in-right"></i> Влез
                                         </button>
+                                        <div id="loginError" class="alert alert-danger mt-3" style="display: none;"></div>
                                     </form>
                                     <hr>
                                     <p class="text-center text-muted">
@@ -100,9 +112,11 @@ export function renderAuth() {
                                                 Съглашам се с условията на ползване
                                             </label>
                                         </div>
-                                        <button type="submit" class="btn btn-primary w-100">
+                                        <button type="submit" class="btn btn-primary w-100" id="registerBtn">
                                             <i class="bi bi-person-plus"></i> Регистрирай се
                                         </button>
+                                        <div id="registerError" class="alert alert-danger mt-3" style="display: none;"></div>
+                                        <div id="registerSuccess" class="alert alert-success mt-3" style="display: none;"></div>
                                     </form>
                                 </div>
                             </div>
@@ -114,30 +128,101 @@ export function renderAuth() {
     `
     
     // Add event listeners
+    attachAuthListeners()
+}
+
+function attachAuthListeners() {
     const loginForm = document.getElementById('loginForm')
     const registerForm = document.getElementById('registerForm')
     
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault()
-            alert('Вход функционалност ще бъде добавена в Стъпка 3 със Supabase')
-            console.log('Login attempt')
-        })
+        loginForm.addEventListener('submit', handleLogin)
     }
     
     if (registerForm) {
-        registerForm.addEventListener('submit', (e) => {
-            e.preventDefault()
-            const password = document.getElementById('registerPassword').value
-            const passwordConfirm = document.getElementById('registerPasswordConfirm').value
-            
-            if (password !== passwordConfirm) {
-                alert('Паролите не съвпадат!')
-                return
-            }
-            
-            alert('Регистрация функционалност ще бъде добавена в Стъпка 3 със Supabase')
-            console.log('Register attempt')
-        })
+        registerForm.addEventListener('submit', handleRegister)
+    }
+}
+
+async function handleLogin(e) {
+    e.preventDefault()
+    
+    const email = document.getElementById('loginEmail').value
+    const password = document.getElementById('loginPassword').value
+    const loginBtn = document.getElementById('loginBtn')
+    const errorDiv = document.getElementById('loginError')
+    
+    try {
+        loginBtn.disabled = true
+        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Влизане...'
+        errorDiv.style.display = 'none'
+        
+        const { error } = await authService.login(email, password)
+        
+        if (error) {
+            throw error
+        }
+        
+        // Success
+        alert('✅ Успешно влизане! Профилът е активен.')
+        window.location.hash = '#/'
+    } catch (error) {
+        errorDiv.textContent = error.message || 'Грешка при вход. Проверете email и парола.'
+        errorDiv.style.display = 'block'
+    } finally {
+        loginBtn.disabled = false
+        loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Влез'
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault()
+    
+    const fullName = document.getElementById('registerName').value
+    const email = document.getElementById('registerEmail').value
+    const phone = document.getElementById('registerPhone').value
+    const city = document.getElementById('registerCity').value
+    const password = document.getElementById('registerPassword').value
+    const passwordConfirm = document.getElementById('registerPasswordConfirm').value
+    
+    const registerBtn = document.getElementById('registerBtn')
+    const errorDiv = document.getElementById('registerError')
+    const successDiv = document.getElementById('registerSuccess')
+    
+    errorDiv.style.display = 'none'
+    successDiv.style.display = 'none'
+    
+    try {
+        // Validate
+        if (password !== passwordConfirm) {
+            throw new Error('Паролите не съвпадат!')
+        }
+        
+        if (!city) {
+            throw new Error('Избери град')
+        }
+        
+        registerBtn.disabled = true
+        registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Регистриране...'
+        
+        const { error } = await authService.register(email, password, fullName, phone, city)
+        
+        if (error) {
+            throw error
+        }
+        
+        // Success
+        successDiv.textContent = '✅ Регистрацията е успешна! Проверете имейла за потвърждение.'
+        successDiv.style.display = 'block'
+        
+        setTimeout(() => {
+            window.location.hash = '#/auth'
+        }, 2000)
+    } catch (error) {
+        errorDiv.textContent = error.message || 'Грешка при регистрация.'
+        errorDiv.style.display = 'block'
+    } finally {
+        registerBtn.disabled = false
+        registerBtn.innerHTML = '<i class="bi bi-person-plus"></i> Регистрирай се'
     }
 }

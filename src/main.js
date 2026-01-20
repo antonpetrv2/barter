@@ -17,6 +17,15 @@ import { renderMyListings } from './pages/myListings.js'
 import { renderNavbar } from './components/navbar.js'
 import { renderFooter } from './components/footer.js'
 
+// Service imports
+import { authService } from './services/supabaseService.js'
+
+// Global auth state
+window.authState = {
+    user: null,
+    isLoggedIn: false,
+}
+
 // Router configuration
 const routes = {
     '/': renderHome,
@@ -31,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Barter App initialized!')
     initializeApp()
     setupRouter()
+    checkAuthStatus()
 })
 
 async function initializeApp() {
@@ -46,6 +56,18 @@ async function initializeApp() {
     // Render static components
     renderNavbar()
     renderFooter()
+}
+
+/**
+ * Check user authentication status
+ */
+async function checkAuthStatus() {
+    const user = await authService.getCurrentUser()
+    if (user) {
+        window.authState.user = user
+        window.authState.isLoggedIn = true
+        console.log('👤 User logged in:', user.email)
+    }
 }
 
 /**
