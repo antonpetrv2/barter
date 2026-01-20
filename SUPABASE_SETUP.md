@@ -30,10 +30,19 @@
 
 ## Step 4: Create Database Schema
 
-Go to **SQL Editor** in Supabase and run this SQL:
+**ВАЖНО:** Копирайте SQL от файла `database.sql` в този репозиторий!
 
+### Метод 1: Прямо копиране (препоръчано)
+1. Отворете файла `database.sql` в VS Code
+2. Копирайте ВСИЧКИЯ текст (Ctrl+A, Ctrl+C)
+3. В Supabase SQL Editor, вставете го
+4. Щракнете "Run" 
+
+### Метод 2: Откъс по откъс
+Ако имате проблеми, изпълнете следните SQL командии отделно:
+
+**1. Създайте таблици:**
 ```sql
--- Create users table
 CREATE TABLE users (
     id UUID PRIMARY KEY REFERENCES auth.users(id),
     email TEXT UNIQUE NOT NULL,
@@ -47,7 +56,6 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create listings table
 CREATE TABLE listings (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -66,7 +74,6 @@ CREATE TABLE listings (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create categories table
 CREATE TABLE categories (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT UNIQUE NOT NULL,
@@ -74,7 +81,6 @@ CREATE TABLE categories (
     description TEXT
 );
 
--- Create messages table
 CREATE TABLE messages (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -85,7 +91,6 @@ CREATE TABLE messages (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create reviews table
 CREATE TABLE reviews (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -95,22 +100,26 @@ CREATE TABLE reviews (
     review_text TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+```
 
--- Create indexes for performance
+**2. Създайте индекси:**
+```sql
 CREATE INDEX idx_listings_user_id ON listings(user_id);
 CREATE INDEX idx_listings_category ON listings(category);
 CREATE INDEX idx_messages_sender ON messages(sender_id);
 CREATE INDEX idx_messages_receiver ON messages(receiver_id);
 CREATE INDEX idx_reviews_user ON reviews(reviewed_user_id);
+```
 
--- Insert sample categories
+**3. Вставете категории:**
+```sql
 INSERT INTO categories (name, icon, description) VALUES
-    ('Компютри', '💻', 'Ретро компютри и системи'),
-    ('Клавиатури', '⌨️', 'Механични и стари клавиатури'),
-    ('Монитори', '🖥️', 'CRT и старинни дисплеи'),
-    ('Мишки', '🖱️', 'Механични мишки'),
-    ('Периферия', '🔌', 'Принтери, скенери и др.'),
-    ('Части', '🔧', 'Компоненти и резервни части');
+('Компютри', '💻', 'Ретро компютри и системи'),
+('Клавиатури', '⌨️', 'Механични и стари клавиатури'),
+('Монитори', '🖥️', 'CRT и старинни дисплеи'),
+('Мишки', '🖱️', 'Механични мишки'),
+('Периферия', '🔌', 'Принтери, скенери и др.'),
+('Части', '🔧', 'Компоненти и резервни части');
 ```
 
 ## Step 5: Enable Row Level Security (RLS)
