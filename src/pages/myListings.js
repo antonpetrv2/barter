@@ -85,9 +85,9 @@ export async function renderMyListings() {
                             <h1 class="display-5 fw-bold mb-2">Моите обяви</h1>
                             <p class="text-muted">${userListings.length} активни обяви</p>
                         </div>
-                        <button class="btn btn-primary btn-lg">
+                        <a href="#/create-listing" class="btn btn-primary btn-lg">
                             <i class="bi bi-plus-lg"></i> Нова обява
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

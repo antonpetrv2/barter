@@ -12,6 +12,7 @@ import { renderListings } from './pages/listings.js'
 import { renderListingDetail } from './pages/listingDetail.js'
 import { renderAuth } from './pages/auth.js'
 import { renderMyListings } from './pages/myListings.js'
+import { renderCreateListing } from './pages/createListing.js'
 
 // Component imports
 import { renderNavbar } from './components/navbar.js'
@@ -33,6 +34,7 @@ const routes = {
     '/listing/:id': renderListingDetail,
     '/auth': renderAuth,
     '/my-listings': renderMyListings,
+    '/create-listing': renderCreateListing,
 }
 
 // Initialize app
