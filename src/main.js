@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initializeApp() {
     const app = document.getElementById('app')
+    console.log('📦 App element:', app)
     
     // Load header and footer
     app.innerHTML = `
@@ -55,9 +56,13 @@ async function initializeApp() {
         <footer id="footer"></footer>
     `
     
+    console.log('📦 App HTML structure created')
+    
     // Render static components
     renderNavbar()
     renderFooter()
+    
+    console.log('📦 Navbar and Footer rendered')
 }
 
 /**
@@ -95,13 +100,16 @@ async function handleRoute() {
     const hash = window.location.hash.slice(1) || '/'
     const [pathname, params] = parseRoute(hash)
     
-    console.log(`📍 Routing to: ${pathname}`)
+    console.log(`📍 Routing to: ${pathname}`, params)
     
     const content = document.getElementById('content')
     content.innerHTML = '<div class="container py-5"><p class="text-center">Зареждане...</p></div>'
     
     // Find matching route
     let pageRenderer = routes[pathname]
+    console.log('Available routes:', Object.keys(routes))
+    console.log('Looking for route:', pathname)
+    console.log('Found renderer:', !!pageRenderer)
     
     // Check for dynamic routes
     if (!pageRenderer) {
@@ -111,6 +119,7 @@ async function handleRoute() {
                 const regex = new RegExp(`^${pattern}$`)
                 if (regex.test(pathname)) {
                     pageRenderer = routes[route]
+                    console.log('Matched dynamic route:', route)
                     break
                 }
             }
@@ -118,8 +127,14 @@ async function handleRoute() {
     }
     
     if (pageRenderer) {
-        await pageRenderer(params)
+        try {
+            await pageRenderer(params)
+        } catch (error) {
+            console.error('Error rendering page:', error)
+            content.innerHTML = `<div class="container py-5"><div class="alert alert-danger">Грешка при зареждане на страницата: ${error.message}</div></div>`
+        }
     } else {
+        console.log('No renderer found, rendering home')
         renderHome()
     }
 }
@@ -128,17 +143,18 @@ async function handleRoute() {
  * Parse route and extract parameters
  */
 function parseRoute(hash) {
-    const parts = hash.split('/')
-    let pathname = hash
+    const parts = hash.split('/').filter(p => p) // Remove empty parts
+    let pathname = '/'
     const params = {}
     
-    // Check if it's a dynamic route like /listing/123
-    if (parts.length > 1) {
-        const id = parts[parts.length - 1]
-        if (!isNaN(id) || id.length > 0) {
-            pathname = '/' + parts.slice(0, -1).join('/').replace(/^\//, '')
-            if (pathname === '') pathname = '/'
-            params.id = id
+    // Build pathname
+    if (parts.length > 0) {
+        if (parts.length === 1) {
+            pathname = '/' + parts[0]
+        } else if (parts.length >= 2) {
+            // For routes like /listing/123
+            pathname = '/' + parts[0] + '/:id'
+            params.id = parts[1]
         }
     }
     
