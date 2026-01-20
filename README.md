@@ -43,21 +43,33 @@ src/
 
 ## Features
 
-### Current (Step 3)
+### Current (Step 4) ✅
 - ✅ Multi-page navigation with hash-based routing
 - ✅ Home page with categories
-- ✅ Browse listings with filters and search
-- ✅ Detailed listing view
-- ✅ User authentication (login/register with Supabase)
+- ✅ Browse listings from Supabase database with filters and search
+- ✅ Detailed listing view with seller information
+- ✅ User authentication (login/register)
+- ✅ My Listings - view and manage user's own listings
+- ✅ Create new listing form with validation
+- ✅ Graceful fallback to demo data if Supabase not configured
+- ✅ Loading states and error handling
+- ✅ RLS policies ready for production
+- ✅ User authentication (login/register)
+- ✅ My Listings - view and manage user's own listings
+- ✅ Create new listing form with validation
+- ✅ Graceful fallback to demo data if Supabase not configured
+- ✅ Loading states and error handling
+- ✅ RLS policies ready for production
 - ✅ Responsive Bootstrap UI
 
-### Coming Soon
-- 🔜 Real listings database
+### Coming Soon (Step 5)
+- 🔜 Image uploads to Supabase Storage
 - 🔜 User profiles and ratings
-- 🔜 Create/Edit/Delete listings
+- 🔜 Edit/Delete listings functionality
 - 🔜 Messaging between users
-- 🔜 Image uploads
-- 🔜 Advanced filtering
+- 🔜 Review/rating system
+- 🔜 Advanced filtering and search
+- 🔜 Performance optimization
 
 ## Technologies
 - **Frontend**: HTML5, CSS3, Vanilla JavaScript (ES6+)
