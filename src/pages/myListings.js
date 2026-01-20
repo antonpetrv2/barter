@@ -3,11 +3,13 @@
  * User's own listings management
  */
 
-export function renderMyListings() {
+import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+
+export async function renderMyListings() {
     const content = document.getElementById('content')
     
-    // Check if user is logged in (placeholder)
-    const isLoggedIn = false
+    // Check if user is logged in
+    const isLoggedIn = window.authState?.isLoggedIn
     
     if (!isLoggedIn) {
         content.innerHTML = `
@@ -24,9 +26,32 @@ export function renderMyListings() {
         `
         return
     }
+    // Show loading state
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Зареждане...</span>
+                </div>
+                <p class="mt-3">Зареждане на Вашите обяви...</p>
+            </div>
+        </div>
+    `
+    
+    // Fetch user's listings from Supabase
+    let userListings = []
+    
+    if (isLoggedIn && isSupabaseConnected()) {
+        try {
+            const userId = window.authState.user.id
+            userListings = await listingsService.getUserListings(userId)
+        } catch (error) {
+            console.error('Error fetching user listings:', error)
+        }
+    }
     
     // Mock user listings
-    const userListings = [
+    const mockListings = [
         {
             id: 1,
             title: 'Commodore 64',
@@ -44,6 +69,11 @@ export function renderMyListings() {
             price: 'Открит за разговор'
         },
     ]
+    
+    // Use mock if no data from Supabase
+    if (userListings.length === 0) {
+        userListings = mockListings
+    }
     
     content.innerHTML = `
         <div class="container py-5">

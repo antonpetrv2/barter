@@ -3,78 +3,34 @@
  * Display all listings with filters and search
  */
 
-export function renderListings() {
+import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+
+export async function renderListings() {
     const content = document.getElementById('content')
     
-    // Mock data - will be replaced with Supabase data
-    const allListings = [
-        {
-            id: 1,
-            title: 'Commodore 64',
-            description: 'Работи отлично, комплект с джойстик',
-            price: 'за разговор',
-            location: 'София',
-            category: 'Компютри',
-            image: '🖥️',
-            owner: 'Ivan Ivanov',
-            date: '2 часа назад'
-        },
-        {
-            id: 2,
-            title: 'Amiga 500',
-            description: 'Оригинален модел от 1987г',
-            price: 'за разговор',
-            location: 'Пловдив',
-            category: 'Компютри',
-            image: '💾',
-            owner: 'Maria Georgieva',
-            date: '1 день назад'
-        },
-        {
-            id: 3,
-            title: 'IBM PC XT',
-            description: 'Класически компютър, всички документи',
-            price: 'за разговор',
-            location: 'Варна',
-            category: 'Компютри',
-            image: '🔌',
-            owner: 'Petko Borisov',
-            date: '3 дни назад'
-        },
-        {
-            id: 4,
-            title: 'Механична клавиатура',
-            description: 'Немска клавиатура, идеално състояние',
-            price: 'за разговор',
-            location: 'Бургас',
-            category: 'Клавиатури',
-            image: '⌨️',
-            owner: 'Aleksandar Aleksandrov',
-            date: '5 часа назад'
-        },
-        {
-            id: 5,
-            title: 'CRT Монитор',
-            description: 'Безопасност монитор 17 инча, перфектен пиксел',
-            price: 'за разговор',
-            location: 'Велико Търново',
-            category: 'Монитори',
-            image: '🖱️',
-            owner: 'Elena Popova',
-            date: '1 неделя назад'
-        },
-        {
-            id: 6,
-            title: 'Логитех мишка',
-            description: 'Старовинна мишка, работи отлично',
-            price: 'за разговор',
-            location: 'Плевен',
-            category: 'Мишки',
-            image: '🔧',
-            owner: 'Nikolay Nikolov',
-            date: '2 дни назад'
-        },
-    ]
+    // Show loading state
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Зареждане...</span>
+                </div>
+                <p class="mt-3">Зареждане на обяви...</p>
+            </div>
+        </div>
+    `
+    
+    // Fetch listings from Supabase or use demo data
+    let allListings = []
+    
+    if (isSupabaseConnected()) {
+        allListings = await listingsService.getAllListings()
+    }
+    
+    // If no listings from Supabase, use demo data
+    if (allListings.length === 0) {
+        allListings = getDemoListings()
+    }
     
     content.innerHTML = `
         <div class="container py-5">
@@ -122,6 +78,10 @@ export function renderListings() {
     `
     
     // Add event listeners for filters
+    attachFilterListeners(allListings)
+}
+
+function attachFilterListeners(allListings) {
     const searchInput = document.getElementById('searchInput')
     const categoryFilter = document.getElementById('categoryFilter')
     const sortFilter = document.getElementById('sortFilter')
@@ -172,7 +132,7 @@ function renderListingsGrid(listings) {
             <div class="card h-100 listing-card">
                 <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; font-size: 4rem; cursor: pointer;">
                     <a href="#/listing/${listing.id}" style="text-decoration: none; color: inherit; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        ${listing.image}
+                        ${listing.image || '📦'}
                     </a>
                 </div>
                 <div class="card-body">
@@ -181,18 +141,18 @@ function renderListingsGrid(listings) {
                             ${listing.title}
                         </a>
                     </h5>
-                    <p class="card-text text-muted small">${listing.description}</p>
+                    <p class="card-text text-muted small">${listing.description || 'Няма описание'}</p>
                     <p class="card-text">
                         <small>
-                            <i class="bi bi-geo-alt"></i> ${listing.location} |
-                            <i class="bi bi-person"></i> ${listing.owner}
+                            <i class="bi bi-geo-alt"></i> ${listing.location || 'Неопределено'} |
+                            <i class="bi bi-person"></i> ${listing.users?.full_name || listing.owner || 'Неизвестен'}
                         </small>
                     </p>
-                    <p class="card-text text-muted small">${listing.date}</p>
+                    <p class="card-text text-muted small">${formatDate(listing.created_at)}</p>
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">${listing.price}</span>
+                        <span class="fw-bold">${listing.price || 'за разговор'}</span>
                         <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">
                             <i class="bi bi-eye"></i> Подробности
                         </a>
@@ -201,4 +161,58 @@ function renderListingsGrid(listings) {
             </div>
         </div>
     `).join('')
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Неизвестна дата'
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now - date
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    
+    if (minutes < 60) return `${minutes} мин назад`
+    if (hours < 24) return `${hours} часа назад`
+    if (days < 7) return `${days} дни назад`
+    
+    return date.toLocaleDateString('bg-BG')
+}
+
+function getDemoListings() {
+    return [
+        {
+            id: 1,
+            title: 'Commodore 64',
+            description: 'Работи отлично, комплект с джойстик',
+            price: 'за разговор',
+            location: 'София',
+            category: 'Компютри',
+            image: '🖥️',
+            owner: 'Ivan Ivanov',
+            created_at: new Date(Date.now() - 2 * 60000).toISOString()
+        },
+        {
+            id: 2,
+            title: 'Amiga 500',
+            description: 'Оригинален модел от 1987г',
+            price: 'за разговор',
+            location: 'Пловдив',
+            category: 'Компютри',
+            image: '💾',
+            owner: 'Maria Georgieva',
+            created_at: new Date(Date.now() - 24 * 3600000).toISOString()
+        },
+        {
+            id: 3,
+            title: 'IBM PC XT',
+            description: 'Класически компютър, всички документи',
+            price: 'за разговор',
+            location: 'Варна',
+            category: 'Компютри',
+            image: '🔌',
+            owner: 'Petko Borisov',
+            created_at: new Date(Date.now() - 3 * 24 * 3600000).toISOString()
+        },
+    ]
 }
