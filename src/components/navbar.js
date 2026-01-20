@@ -45,6 +45,16 @@ export function renderNavbar() {
         .navbar {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        .navbar-nav .nav-link {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #0066cc !important;
+        }
     `
-    document.head.appendChild(style)
+    if (!document.head.querySelector('style[data-navbar]')) {
+        style.setAttribute('data-navbar', 'true')
+        document.head.appendChild(style)
+    }
 }

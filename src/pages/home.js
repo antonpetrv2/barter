@@ -14,8 +14,8 @@ export function renderHome() {
                     <h1 class="display-4 fw-bold mb-3">Добре дошли в BARTER</h1>
                     <p class="lead mb-4">Обменяй ретро компютри и части със събирачи и ентусиасти</p>
                     <div class="gap-2 d-flex justify-content-center">
-                        <button class="btn btn-primary btn-lg">Създай обява</button>
-                        <button class="btn btn-outline-primary btn-lg">Разгледай обяви</button>
+                        <a href="#/my-listings" class="btn btn-primary btn-lg">Създай обява</a>
+                        <a href="#/listings" class="btn btn-outline-primary btn-lg">Разгледай обяви</a>
                     </div>
                 </div>
             </div>
@@ -41,22 +41,24 @@ export function renderHome() {
 
 function generateCategories() {
     const categories = [
-        { name: 'Компютри', icon: '💻' },
-        { name: 'Клавиатури', icon: '⌨️' },
-        { name: 'Монитори', icon: '🖥️' },
-        { name: 'Мишки', icon: '🖱️' },
-        { name: 'Периферия', icon: '🔌' },
-        { name: 'Части', icon: '🔧' },
+        { name: 'Компютри', icon: '💻', path: '/listings' },
+        { name: 'Клавиатури', icon: '⌨️', path: '/listings' },
+        { name: 'Монитори', icon: '🖥️', path: '/listings' },
+        { name: 'Мишки', icon: '🖱️', path: '/listings' },
+        { name: 'Периферия', icon: '🔌', path: '/listings' },
+        { name: 'Части', icon: '🔧', path: '/listings' },
     ]
     
     return categories.map(cat => `
         <div class="col-md-4 col-lg-2 mb-3">
-            <div class="card text-center cursor-pointer">
-                <div class="card-body">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">${cat.icon}</div>
-                    <h6 class="card-title">${cat.name}</h6>
+            <a href="#${cat.path}" style="text-decoration: none; color: inherit;">
+                <div class="card text-center cursor-pointer h-100">
+                    <div class="card-body">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${cat.icon}</div>
+                        <h6 class="card-title">${cat.name}</h6>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
     `).join('')
 }
@@ -98,7 +100,7 @@ function generateFeaturedListings() {
                     <p class="card-text text-muted">${listing.location}</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fw-bold">${listing.price}</span>
-                        <button class="btn btn-sm btn-outline-primary">Повече</button>
+                        <a href="#/listing/${listing.id}" class="btn btn-sm btn-outline-primary">Повече</a>
                     </div>
                 </div>
             </div>
