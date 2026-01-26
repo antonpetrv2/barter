@@ -66,7 +66,7 @@ export async function renderListings() {
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <button class="btn btn-secondary w-100" id="resetBtn">Очистить</button>
+                    <button class="btn btn-secondary w-100" id="resetBtn">Изчистване</button>
                 </div>
             </div>
 
