@@ -21,6 +21,9 @@ export async function renderListingDetail(params) {
         </div>
     `
     
+    // Neutral gray placeholder to indicate missing photo
+    const placeholderImage = 'https://dummyimage.com/800x600/cfcfcf/8a8a8a&text=%D0%B1%D0%B5%D0%B7+%D1%81%D0%BD%D0%B8%D0%BC%D0%BA%D0%B0'
+
     // Fetch listing from Supabase
     let listing = null
     
@@ -54,7 +57,7 @@ export async function renderListingDetail(params) {
     const ownerCity = listing.users?.city || listing.city || 'Неизвестен'
     const ownerRating = listing.users?.rating || listing.ownerRating || 5.0
     const ownerListings = listing.users?.listings_count || listing.ownerListings || 0
-    const mainImage = (listing.images && listing.images[0]) || listing.image_url
+    const mainImage = (listing.images && listing.images[0]) || listing.image_url || placeholderImage
     
     content.innerHTML = `
         <div class="container py-5">
@@ -70,7 +73,7 @@ export async function renderListingDetail(params) {
                     <!-- Image Gallery -->
                     <div class="card mb-4">
                         <div class="bg-light d-flex align-items-center justify-content-center" style="height: 400px;">
-                            ${mainImage ? `<img src="${mainImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
+                            <img src="${mainImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                         </div>
                     </div>
 
@@ -86,7 +89,7 @@ export async function renderListingDetail(params) {
                                     <p class="text-muted"><i class="bi bi-eye"></i> ${listing.views || 0} прегледа</p>
                                 </div>
                                 <div class="col-md-6 text-md-end">
-                                    <p class="fs-4 fw-bold text-primary">${listing.price || 'за разговор'}</p>
+                                    <p class="fs-4 fw-bold text-primary">${listing.price || 'по договаряне'}</p>
                                 </div>
                             </div>
 
@@ -184,17 +187,17 @@ function renderRelatedListings(related, category) {
             <h4 class="mb-4">Още обяви в категория "${category}"</h4>
             <div class="row g-4">
                 ${related.map(listing => {
-                    const imageUrl = (listing.images && listing.images[0]) || listing.image_url
+                    const imageUrl = (listing.images && listing.images[0]) || listing.image_url || placeholderImage
                     return `
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100">
                             <div class="bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
-                                ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
+                                <img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                             </div>
                             <div class="card-body">
                                 <h6 class="card-title">${listing.title}</h6>
                                 <p class="card-text text-muted small">${listing.location}</p>
-                                <p class="card-text fw-bold">${listing.price || 'за разговор'}</p>
+                                <p class="card-text fw-bold">${listing.price || 'по договаряне'}</p>
                                 <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">Подробности</a>
                             </div>
                         </div>

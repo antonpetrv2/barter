@@ -86,8 +86,8 @@ export async function renderCreateListing() {
                                 <!-- Price -->
                                 <div class="mb-3">
                                     <label for="price" class="form-label">Цена</label>
-                                    <input type="text" class="form-control" id="price" name="price" placeholder="за разговор">
-                                    <small class="form-text text-muted">Остави празно за "за разговор"</small>
+                                    <input type="text" class="form-control" id="price" name="price" placeholder="по договаряне">
+                                    <small class="form-text text-muted">Остави празно за "по договаряне"</small>
                                 </div>
 
                                 <!-- Location -->
@@ -206,7 +206,7 @@ async function handleCreateListing(e) {
             title: formData.get('title'),
             description: formData.get('description'),
             category: formData.get('category'),
-            price: formData.get('price') || 'за разговор',
+            price: formData.get('price') || 'по договаряне',
             location: formData.get('location'),
             condition: formData.get('condition'),
             year: formData.get('year') ? parseInt(formData.get('year')) : null,

@@ -111,6 +111,9 @@ function attachFilterListeners(allListings) {
     })
 }
 
+// Neutral gray placeholder to hint missing photo
+const placeholderImage = 'https://dummyimage.com/800x600/cfcfcf/8a8a8a&text=%D0%B1%D0%B5%D0%B7+%D1%81%D0%BD%D0%B8%D0%BC%D0%BA%D0%B0'
+
 function renderListingsGrid(listings) {
     if (listings.length === 0) {
         return `
@@ -124,13 +127,14 @@ function renderListingsGrid(listings) {
     
     return listings.map(listing => {
         const imageUrl = (listing.images && listing.images[0]) || listing.image_url
+        const displayImage = imageUrl || placeholderImage
 
         return `
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100 listing-card">
                 <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; cursor: pointer;">
                     <a href="#/listing/${listing.id}" style="text-decoration: none; color: inherit; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
+                        <img src="${displayImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                     </a>
                 </div>
                 <div class="card-body">
@@ -150,7 +154,7 @@ function renderListingsGrid(listings) {
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">${listing.price || 'за разговор'}</span>
+                        <span class="fw-bold">${listing.price || 'по договаряне'}</span>
                         <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">
                             <i class="bi bi-eye"></i> Подробности
                         </a>

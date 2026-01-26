@@ -14,7 +14,7 @@ export function renderNavbar() {
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
             <div class="container-fluid">
                 <a class="navbar-brand fw-bold" href="#/">
-                    <i class="bi bi-laptop"></i> BARTER
+                    <i class="bi bi-laptop"></i> Ретро Бартер
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -25,11 +25,15 @@ export function renderNavbar() {
                             <a class="nav-link" href="#/">Начало</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#/listings">Обяви</a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="#/my-listings">Моите обяви</a>
                         </li>
+                        ${isLoggedIn ? `
+                        <li class="nav-item">
+                            <a class="btn btn-warning btn-sm" href="#/create-listing">
+                                <i class="bi bi-plus-circle"></i> Добави обява
+                            </a>
+                        </li>
+                        ` : ''}
                         ${isAdmin ? `
                         <li class="nav-item">
                             <a class="nav-link text-danger fw-bold" href="#/admin">
@@ -61,8 +65,9 @@ export function renderNavbar() {
     const style = document.createElement('style')
     style.textContent = `
         .navbar-brand {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             color: #0066cc !important;
+            white-space: nowrap;
         }
         .navbar {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);

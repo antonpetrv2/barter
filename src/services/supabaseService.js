@@ -212,6 +212,8 @@ export const listingsService = {
     async getListingById(id) {
         if (!supabase) return null
 
+        console.log('getListingById called with id:', id)
+
         try {
             const { data, error } = await supabase
                 .from('listings')
@@ -227,7 +229,13 @@ export const listingsService = {
                 .eq('id', id)
                 .single()
 
-            return error ? null : data
+            if (error) {
+                console.error('Error in getListingById:', error)
+                return null
+            }
+
+            console.log('getListingById result:', data)
+            return data
         } catch (error) {
             console.error('Error fetching listing:', error)
             return null

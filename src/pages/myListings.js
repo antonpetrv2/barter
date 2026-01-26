@@ -58,7 +58,7 @@ export async function renderMyListings() {
             status: 'Активна',
             views: 234,
             date: '2 часа назад',
-            price: 'Открит за разговор'
+            price: 'Открит по договаряне'
         },
         {
             id: 2,
@@ -66,7 +66,7 @@ export async function renderMyListings() {
             status: 'Активна',
             views: 156,
             date: '1 день назад',
-            price: 'Открит за разговор'
+            price: 'Открит по договаряне'
         },
     ]
     
@@ -131,10 +131,10 @@ export async function renderMyListings() {
                                                     <a href="#/listing/${listing.id}" class="btn btn-outline-primary" title="Преглед">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
-                                                    <button class="btn btn-outline-secondary" title="Редактирай">
+                                                    <a href="#/edit-listing/${listing.id}" class="btn btn-outline-secondary" title="Редактирай">
                                                         <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <button class="btn btn-outline-danger" title="Изтрий">
+                                                    </a>
+                                                    <button class="btn btn-outline-danger delete-listing-btn" data-listing-id="${listing.id}" title="Изтрий">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </div>
@@ -175,4 +175,28 @@ export async function renderMyListings() {
             </div>
         </div>
     `
-}
+
+    // Add event listeners for delete buttons
+    const deleteButtons = document.querySelectorAll('.delete-listing-btn')
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.getAttribute('data-listing-id')
+            
+            if (confirm('Сигурни ли сте, че искате да изтриете тази обява?')) {
+                try {
+                    const result = await listingsService.deleteListing(listingId)
+                    
+                    if (result.error) {
+                        throw new Error(result.error)
+                    }
+                    
+                    alert('Обявата е изтрита успешно!')
+                    // Reload the page
+                    await renderMyListings()
+                } catch (error) {
+                    console.error('Error deleting listing:', error)
+                    alert('Грешка при изтриване на обявата: ' + error.message)
+                }
+            }
+        })
+    })}

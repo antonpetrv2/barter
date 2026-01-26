@@ -13,6 +13,7 @@ import { renderListingDetail } from './pages/listingDetail.js'
 import { renderAuth } from './pages/auth.js'
 import { renderMyListings } from './pages/myListings.js'
 import { renderCreateListing } from './pages/createListing.js'
+import { renderEditListing } from './pages/editListing.js'
 import { renderAdmin } from './pages/admin.js'
 
 // Component imports
@@ -37,6 +38,7 @@ const routes = {
     '/auth': renderAuth,
     '/my-listings': renderMyListings,
     '/create-listing': renderCreateListing,
+    '/edit-listing/:id': renderEditListing,
     '/admin': renderAdmin,
 }
 
