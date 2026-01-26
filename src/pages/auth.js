@@ -163,6 +163,16 @@ async function handleLogin(e) {
             throw error
         }
         
+        // Wait a moment for auth to settle
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Update auth state and refresh navbar
+        await window.checkAuthStatus()
+        
+        // Re-render navbar to show admin panel
+        const { renderNavbar } = await import('../components/navbar.js')
+        renderNavbar()
+        
         // Success
         alert('✅ Успешно влизане! Профилът е активен.')
         window.location.hash = '#/'
@@ -211,12 +221,22 @@ async function handleRegister(e) {
             throw error
         }
         
-        // Success
-        successDiv.textContent = '✅ Регистрацията е успешна! Проверете имейла за потвърждение.'
+        // Success - wait and then update auth state
+        successDiv.textContent = '✅ Регистрацията е успешна! Влизане...'
         successDiv.style.display = 'block'
         
+        // Wait a moment for auth to settle
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Update auth state and refresh navbar
+        await window.checkAuthStatus()
+        
+        // Re-render navbar to show admin panel
+        const { renderNavbar } = await import('../components/navbar.js')
+        renderNavbar()
+        
         setTimeout(() => {
-            window.location.hash = '#/auth'
+            window.location.hash = '#/'
         }, 2000)
     } catch (error) {
         errorDiv.textContent = error.message || 'Грешка при регистрация.'

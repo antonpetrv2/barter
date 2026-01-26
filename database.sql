@@ -1,6 +1,13 @@
 -- BARTER App - Database Schema for Supabase
 -- Copy and paste this entire script into Supabase SQL Editor
 
+-- Drop existing tables if they exist (CASCADE to handle dependencies)
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS listings CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- Create users table
 CREATE TABLE users (
     id UUID PRIMARY KEY REFERENCES auth.users(id),
@@ -11,6 +18,11 @@ CREATE TABLE users (
     avatar_url TEXT,
     rating NUMERIC DEFAULT 5.0,
     listings_count INTEGER DEFAULT 0,
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    status TEXT DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
+    is_banned BOOLEAN DEFAULT false,
+    ban_reason TEXT,
+    banned_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

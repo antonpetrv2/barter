@@ -4,6 +4,7 @@
  */
 
 import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+import { renderImageUpload, getUploadedImages, clearUploadedImages } from '../components/imageUpload.js'
 
 export async function renderCreateListing() {
     const content = document.getElementById('content')
@@ -60,6 +61,12 @@ export async function renderCreateListing() {
                                     <label for="fullDescription" class="form-label">Пълно описание</label>
                                     <textarea class="form-control" id="fullDescription" name="fullDescription" rows="4" placeholder="Детайлно описание на състоянието, функционалност, включени аксесоари..."></textarea>
                                     <small class="form-text text-muted">Детайли като година на производство, състояние, функционалност</small>
+                                </div>
+
+                                <!-- Image Upload -->
+                                <div class="mb-4">
+                                    <label class="form-label">Снимки <span class="badge bg-info">Ново</span></label>
+                                    <div id="imageUploadContainer"></div>
                                 </div>
 
                                 <!-- Category -->
@@ -127,13 +134,6 @@ export async function renderCreateListing() {
                                     </div>
                                 </div>
 
-                                <!-- Image URL (optional) -->
-                                <div class="mb-3">
-                                    <label for="image" class="form-label">Снимка (Emoji за демо)</label>
-                                    <input type="text" class="form-control" id="image" name="image" placeholder="🖥️" maxlength="4">
-                                    <small class="form-text text-muted">За демо версия използвай емоджи (🖥️, 💾, ⌨️, 🖱️, 📦 и т.н.)</small>
-                                </div>
-
                                 <!-- Buttons -->
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
@@ -175,6 +175,12 @@ export async function renderCreateListing() {
         </div>
     `
     
+    // Initialize image upload
+    renderImageUpload('imageUploadContainer', {
+        maxFiles: 5,
+        maxSizeMB: 5,
+    })
+    
     // Attach form handler
     const form = document.getElementById('createListingForm')
     if (form) {
@@ -206,7 +212,7 @@ async function handleCreateListing(e) {
             condition: formData.get('condition'),
             year: formData.get('year') ? parseInt(formData.get('year')) : null,
             working: formData.get('working') === 'true',
-            image: formData.get('image') || '📦'
+            images: getUploadedImages()
         }
         
         // Validate required fields
@@ -223,6 +229,9 @@ async function handleCreateListing(e) {
             })
             
             if (result) {
+                // Clear uploaded images
+                clearUploadedImages()
+                
                 // Show success message
                 showSuccessAlert('Обявата е успешно публикувана!')
                 

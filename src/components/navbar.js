@@ -3,8 +3,12 @@
  * Displays the main navigation for the app
  */
 
+import { authService } from '../services/supabaseService.js'
+
 export function renderNavbar() {
     const navbar = document.getElementById('navbar')
+    const isAdmin = window.authState?.isAdmin || false
+    const isLoggedIn = window.authState?.isLoggedIn || false
     
     navbar.innerHTML = `
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
@@ -26,6 +30,20 @@ export function renderNavbar() {
                         <li class="nav-item">
                             <a class="nav-link" href="#/my-listings">Моите обяви</a>
                         </li>
+                        ${isAdmin ? `
+                        <li class="nav-item">
+                            <a class="nav-link text-danger fw-bold" href="#/admin">
+                                <i class="bi bi-shield-check"></i> Админ Панел
+                            </a>
+                        </li>
+                        ` : ''}
+                        ${isLoggedIn ? `
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link" id="refresh-profile" title="Освежи профила">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </li>
+                        ` : ''}
                         <li class="nav-item">
                             <a class="nav-link" href="#/auth">Вход / Регистрация</a>
                         </li>
@@ -52,9 +70,51 @@ export function renderNavbar() {
         .navbar-nav .nav-link:hover {
             color: #0066cc !important;
         }
+        #refresh-profile {
+            border: none;
+            padding: 0.5rem !important;
+            color: #0066cc !important;
+        }
+        #refresh-profile:hover {
+            color: #0066cc !important;
+        }
     `
     if (!document.head.querySelector('style[data-navbar]')) {
         style.setAttribute('data-navbar', 'true')
         document.head.appendChild(style)
+    }
+
+    // Setup refresh profile button
+    const refreshBtn = document.getElementById('refresh-profile')
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            refreshBtn.classList.add('spinning')
+            await refreshUserProfile()
+            refreshBtn.classList.remove('spinning')
+        })
+    }
+}
+
+/**
+ * Refresh user profile from Supabase
+ */
+async function refreshUserProfile() {
+    const user = await authService.getCurrentUser()
+    if (!user) return
+
+    const userProfile = await authService.getUserProfile(user.id)
+    if (userProfile) {
+        window.authState.user = user
+        window.authState.isLoggedIn = true
+        window.authState.isAdmin = userProfile.role === 'admin'
+        
+        console.log('✅ Профил освежен')
+        
+        if (window.authState.isAdmin) {
+            console.log('👑 Вече имате админ привилегии!')
+            alert('✅ Успешно! Вече сте администратор. Админ панелът е достъпен.')
+            // Re-render navbar to show admin panel
+            renderNavbar()
+        }
     }
 }

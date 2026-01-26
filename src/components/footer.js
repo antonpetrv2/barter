@@ -15,7 +15,7 @@ export function renderFooter() {
                     <p>Платформа за бартер на ретро компютри и части</p>
                 </div>
                 <div class="col-md-4">
-                    <h5>Быстрые ссылки</h5>
+                    <h5>Бързи връзки</h5>
                     <ul class="list-unstyled">
                         <li><a href="#/" class="text-white-50">Начало</a></li>
                         <li><a href="#/listings" class="text-white-50">Обяви</a></li>

@@ -13,6 +13,7 @@ import { renderListingDetail } from './pages/listingDetail.js'
 import { renderAuth } from './pages/auth.js'
 import { renderMyListings } from './pages/myListings.js'
 import { renderCreateListing } from './pages/createListing.js'
+import { renderAdmin } from './pages/admin.js'
 
 // Component imports
 import { renderNavbar } from './components/navbar.js'
@@ -25,6 +26,7 @@ import { authService } from './services/supabaseService.js'
 window.authState = {
     user: null,
     isLoggedIn: false,
+    isAdmin: false,
 }
 
 // Router configuration
@@ -35,6 +37,7 @@ const routes = {
     '/auth': renderAuth,
     '/my-listings': renderMyListings,
     '/create-listing': renderCreateListing,
+    '/admin': renderAdmin,
 }
 
 // Initialize app
@@ -64,18 +67,28 @@ async function initializeApp() {
     
     console.log('📦 Navbar and Footer rendered')
 }
-
 /**
  * Check user authentication status
  */
 async function checkAuthStatus() {
     const user = await authService.getCurrentUser()
     if (user) {
+        const userProfile = await authService.getUserProfile(user.id)
         window.authState.user = user
         window.authState.isLoggedIn = true
+        window.authState.isAdmin = userProfile && userProfile.role === 'admin'
+        window.authState.userStatus = userProfile && userProfile.status
         console.log('👤 User logged in:', user.email)
+        if (window.authState.isAdmin) {
+            console.log('👑 Admin privileges granted')
+        }
     }
 }
+
+/**
+ * Export for external use
+ */
+window.checkAuthStatus = checkAuthStatus
 
 /**
  * Setup hash-based router for multi-page navigation

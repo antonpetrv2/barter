@@ -123,6 +123,49 @@ export const authService = {
             return null
         }
     },
+
+    /**
+     * Get user profile from database
+     */
+    async getUserProfile(userId) {
+        if (!supabase) return null
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .single()
+
+            if (error) {
+                console.error('Error fetching user profile:', error.message || error)
+                return null
+            }
+
+            return data
+        } catch (error) {
+            console.error('Error fetching user profile:', error.message || error)
+            return null
+        }
+    },
+
+    /**
+     * Update user profile
+     */
+    async updateUserProfile(userId, updates) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update(updates)
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
 }
 
 /**
@@ -279,42 +322,301 @@ export const listingsService = {
 }
 
 /**
- * User Service
+ * Admin Service
  */
-export const userService = {
+export const adminService = {
     /**
-     * Get user profile
+     * Get all users with filters
      */
-    async getUserProfile(userId) {
-        if (!supabase) return null
+    async getAllUsers(filters = {}) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран', data: [] }
 
         try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .single()
+            let query = supabase.from('users').select('*')
 
-            return error ? null : data
+            // Apply filters
+            if (filters.status) {
+                query = query.eq('status', filters.status)
+            }
+            if (filters.role) {
+                query = query.eq('role', filters.role)
+            }
+            if (filters.is_banned !== undefined) {
+                query = query.eq('is_banned', filters.is_banned)
+            }
+            if (filters.search) {
+                query = query.or(`email.ilike.%${filters.search}%,full_name.ilike.%${filters.search}%`)
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false })
+
+            return error ? { error, data: [] } : { data }
         } catch (error) {
-            console.error('Error fetching user profile:', error)
-            return null
+            return { error, data: [] }
         }
     },
 
     /**
-     * Update user profile
+     * Approve user account
      */
-    async updateUserProfile(userId, updates) {
+    async approveUser(userId) {
         if (!supabase) return { error: 'Supabase не е конфигуриран' }
 
         try {
             const { data, error } = await supabase
                 .from('users')
-                .update(updates)
+                .update({ status: 'approved' })
                 .eq('id', userId)
 
             return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Reject user account
+     */
+    async rejectUser(userId, reason = '') {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ status: 'rejected', ban_reason: reason })
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Ban user
+     */
+    async banUser(userId, reason = '') {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ 
+                    is_banned: true, 
+                    ban_reason: reason,
+                    banned_at: new Date().toISOString()
+                })
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Unban user
+     */
+    async unbanUser(userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ 
+                    is_banned: false, 
+                    ban_reason: null,
+                    banned_at: null
+                })
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Delete user account
+     */
+    async deleteUser(userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            // Delete user profile (cascade will handle listings, messages, etc)
+            const { data, error } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Make user admin
+     */
+    async makeUserAdmin(userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ role: 'admin' })
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Remove admin privileges
+     */
+    async removeAdminPrivileges(userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update({ role: 'user' })
+                .eq('id', userId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Get user statistics
+     */
+    async getUserStatistics() {
+        if (!supabase) return { error: 'Supabase не е конфигуриран', stats: {} }
+
+        try {
+            // Total users
+            const { data: totalUsers } = await supabase
+                .from('users')
+                .select('id', { count: 'exact' })
+
+            // Pending approvals
+            const { data: pendingUsers } = await supabase
+                .from('users')
+                .select('id', { count: 'exact' })
+                .eq('status', 'pending')
+
+            // Banned users
+            const { data: bannedUsers } = await supabase
+                .from('users')
+                .select('id', { count: 'exact' })
+                .eq('is_banned', true)
+
+            // Active listings
+            const { data: activeListings } = await supabase
+                .from('listings')
+                .select('id', { count: 'exact' })
+
+            const stats = {
+                totalUsers: totalUsers?.length || 0,
+                pendingApprovals: pendingUsers?.length || 0,
+                bannedUsers: bannedUsers?.length || 0,
+                activeListings: activeListings?.length || 0,
+            }
+
+            return { stats }
+        } catch (error) {
+            return { error, stats: {} }
+        }
+    },
+}
+
+/**
+ * Storage Service
+ * Handles file uploads to Supabase Storage
+ */
+export const storageService = {
+    /**
+     * Upload image to storage
+     */
+    async uploadImage(file, bucketName = 'listings') {
+        if (!supabase) {
+            return { error: 'Supabase не е конфигуриран', url: null }
+        }
+
+        try {
+            // Generate unique filename
+            const timestamp = Date.now()
+            const randomStr = Math.random().toString(36).substring(2, 8)
+            const filename = `${timestamp}-${randomStr}-${file.name}`
+            const path = `${bucketName}/${filename}`
+
+            // Upload file
+            const { data, error } = await supabase.storage
+                .from(bucketName)
+                .upload(path, file, {
+                    cacheControl: '3600',
+                    upsert: false,
+                })
+
+            if (error) {
+                console.error('Upload error:', error.message)
+                return { error, url: null }
+            }
+
+            // Get public URL
+            const { data: publicUrlData } = supabase.storage
+                .from(bucketName)
+                .getPublicUrl(path)
+
+            return { url: publicUrlData.publicUrl, path }
+        } catch (error) {
+            console.error('Upload error:', error.message)
+            return { error, url: null }
+        }
+    },
+
+    /**
+     * Upload multiple images
+     */
+    async uploadMultipleImages(files, bucketName = 'listings') {
+        if (!supabase) {
+            return { error: 'Supabase не е конфигуриран', urls: [] }
+        }
+
+        const urls = []
+        const errors = []
+
+        for (const file of files) {
+            const { url, error } = await this.uploadImage(file, bucketName)
+            
+            if (error) {
+                errors.push({ file: file.name, error: error.message })
+            } else {
+                urls.push(url)
+            }
+        }
+
+        return { urls, errors: errors.length > 0 ? errors : null }
+    },
+
+    /**
+     * Delete image from storage
+     */
+    async deleteImage(imagePath, bucketName = 'listings') {
+        if (!supabase) {
+            return { error: 'Supabase не е конфигуриран' }
+        }
+
+        try {
+            const { error } = await supabase.storage
+                .from(bucketName)
+                .remove([imagePath])
+
+            return error ? { error } : { success: true }
         } catch (error) {
             return { error }
         }
