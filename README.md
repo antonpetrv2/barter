@@ -1,7 +1,7 @@
 # BARTER - Retro Computer Bartering Platform
 
 ## About
-Barter is a web platform for exchanging retro computers and components between enthusiasts and collectors. Built as a final project for SoftUni's "Software Technologies with AI" course.
+Barter is a web platform for exchanging retro computers and components between enthusiasts and collectors.
 
 ## Quick Start
 
