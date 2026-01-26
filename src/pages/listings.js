@@ -27,11 +27,6 @@ export async function renderListings() {
         allListings = await listingsService.getAllListings()
     }
     
-    // If no listings from Supabase, use demo data
-    if (allListings.length === 0) {
-        allListings = getDemoListings()
-    }
-    
     content.innerHTML = `
         <div class="container py-5">
             <!-- Page Title -->
@@ -127,12 +122,15 @@ function renderListingsGrid(listings) {
         `
     }
     
-    return listings.map(listing => `
+    return listings.map(listing => {
+        const imageUrl = (listing.images && listing.images[0]) || listing.image_url
+
+        return `
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100 listing-card">
-                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; font-size: 4rem; cursor: pointer;">
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; cursor: pointer;">
                     <a href="#/listing/${listing.id}" style="text-decoration: none; color: inherit; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        ${listing.image || '📦'}
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
                     </a>
                 </div>
                 <div class="card-body">
@@ -160,7 +158,8 @@ function renderListingsGrid(listings) {
                 </div>
             </div>
         </div>
-    `).join('')
+    `
+    }).join('')
 }
 
 function formatDate(dateString) {
@@ -177,42 +176,4 @@ function formatDate(dateString) {
     if (days < 7) return `${days} дни назад`
     
     return date.toLocaleDateString('bg-BG')
-}
-
-function getDemoListings() {
-    return [
-        {
-            id: 1,
-            title: 'Commodore 64',
-            description: 'Работи отлично, комплект с джойстик',
-            price: 'за разговор',
-            location: 'София',
-            category: 'Компютри',
-            image: '🖥️',
-            owner: 'Ivan Ivanov',
-            created_at: new Date(Date.now() - 2 * 60000).toISOString()
-        },
-        {
-            id: 2,
-            title: 'Amiga 500',
-            description: 'Оригинален модел от 1987г',
-            price: 'за разговор',
-            location: 'Пловдив',
-            category: 'Компютри',
-            image: '💾',
-            owner: 'Maria Georgieva',
-            created_at: new Date(Date.now() - 24 * 3600000).toISOString()
-        },
-        {
-            id: 3,
-            title: 'IBM PC XT',
-            description: 'Класически компютър, всички документи',
-            price: 'за разговор',
-            location: 'Варна',
-            category: 'Компютри',
-            image: '🔌',
-            owner: 'Petko Borisov',
-            created_at: new Date(Date.now() - 3 * 24 * 3600000).toISOString()
-        },
-    ]
 }

@@ -190,9 +190,16 @@ export const listingsService = {
                         rating
                     )
                 `)
+                .eq('status', 'approved')
                 .order('created_at', { ascending: false })
 
-            return error ? [] : (data || [])
+            if (error) {
+                console.error('❌ Грешка при зареждане на листинги:', error)
+                return []
+            }
+
+            console.log('✅ Зареждени листинги:', data?.length || 0, data)
+            return data || []
         } catch (error) {
             console.error('Error fetching listings:', error)
             return []
@@ -258,6 +265,7 @@ export const listingsService = {
                 .from('listings')
                 .insert([{
                     ...listing,
+                    status: 'pending',
                     created_at: new Date().toISOString(),
                     views: 0,
                 }])
@@ -519,17 +527,106 @@ export const adminService = {
             const { data: activeListings } = await supabase
                 .from('listings')
                 .select('id', { count: 'exact' })
+                .eq('status', 'approved')
+
+            // Pending listings
+            const { data: pendingListings } = await supabase
+                .from('listings')
+                .select('id', { count: 'exact' })
+                .eq('status', 'pending')
 
             const stats = {
                 totalUsers: totalUsers?.length || 0,
                 pendingApprovals: pendingUsers?.length || 0,
                 bannedUsers: bannedUsers?.length || 0,
                 activeListings: activeListings?.length || 0,
+                pendingListings: pendingListings?.length || 0,
             }
 
             return { stats }
         } catch (error) {
             return { error, stats: {} }
+        }
+    },
+
+    /**
+     * Get pending listings (awaiting approval)
+     */
+    async getPendingListings() {
+        if (!supabase) return { error: 'Supabase не е конфигуриран', listings: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .select(`
+                    *,
+                    users (
+                        id,
+                        full_name,
+                        email,
+                        phone
+                    )
+                `)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+
+            return error ? { error, listings: [] } : { listings: data || [] }
+        } catch (error) {
+            return { error, listings: [] }
+        }
+    },
+
+    /**
+     * Approve a listing
+     */
+    async approveListing(listingId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .update({ status: 'approved' })
+                .eq('id', listingId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Reject a listing
+     */
+    async rejectListing(listingId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .update({ status: 'rejected' })
+                .eq('id', listingId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Delete a listing
+     */
+    async deleteListing(listingId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .delete()
+                .eq('id', listingId)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
         }
     },
 }
@@ -572,7 +669,12 @@ export const storageService = {
                 .from(bucketName)
                 .getPublicUrl(path)
 
-            return { url: publicUrlData.publicUrl, path }
+            // Ensure full URL with base URL
+            const publicUrl = publicUrlData.publicUrl.startsWith('http') 
+                ? publicUrlData.publicUrl 
+                : `${supabaseUrl}${publicUrlData.publicUrl}`
+
+            return { url: publicUrl, path }
         } catch (error) {
             console.error('Upload error:', error.message)
             return { error, url: null }

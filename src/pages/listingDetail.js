@@ -21,17 +21,11 @@ export async function renderListingDetail(params) {
         </div>
     `
     
-    // Fetch listing from Supabase or use demo data
+    // Fetch listing from Supabase
     let listing = null
     
     if (isSupabaseConnected()) {
         listing = await listingsService.getListingById(listingId)
-    }
-    
-    // If not found in Supabase, try demo data
-    if (!listing) {
-        const demoListings = getDemoListings()
-        listing = demoListings.find(l => l.id === parseInt(listingId))
     }
     
     if (!listing) {
@@ -45,19 +39,11 @@ export async function renderListingDetail(params) {
         `
         return
     }
-    
-    // Fetch related listings
+
     let relatedListings = []
     if (isSupabaseConnected()) {
         const allListings = await listingsService.getAllListings()
         relatedListings = allListings
-            .filter(l => l.category === listing.category && l.id !== listing.id)
-            .slice(0, 3)
-    }
-    
-    if (relatedListings.length === 0) {
-        const demoListings = getDemoListings()
-        relatedListings = demoListings
             .filter(l => l.category === listing.category && l.id !== listing.id)
             .slice(0, 3)
     }
@@ -68,6 +54,7 @@ export async function renderListingDetail(params) {
     const ownerCity = listing.users?.city || listing.city || 'Неизвестен'
     const ownerRating = listing.users?.rating || listing.ownerRating || 5.0
     const ownerListings = listing.users?.listings_count || listing.ownerListings || 0
+    const mainImage = (listing.images && listing.images[0]) || listing.image_url
     
     content.innerHTML = `
         <div class="container py-5">
@@ -82,8 +69,8 @@ export async function renderListingDetail(params) {
                 <div class="col-lg-8">
                     <!-- Image Gallery -->
                     <div class="card mb-4">
-                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 400px; font-size: 10rem;">
-                            ${listing.image || listing.images?.[0] || '📦'}
+                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 400px;">
+                            ${mainImage ? `<img src="${mainImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
                         </div>
                     </div>
 
@@ -172,32 +159,18 @@ export async function renderListingDetail(params) {
 }
 
 function renderTechnicalDetails(listing) {
-    if (!listing.year && listing.condition === undefined && listing.working === undefined) {
-        return ''
-    }
+    const details = []
+    
+    if (listing.year) details.push(`<p><strong>Година:</strong> ${listing.year}</p>`)
+    if (listing.condition) details.push(`<p><strong>Състояние:</strong> ${listing.condition}</p>`)
+    if (listing.working !== undefined) details.push(`<p><strong>Работно състояние:</strong> ${listing.working ? 'Работи' : 'Не работи'}</p>`)
+    
+    if (details.length === 0) return ''
     
     return `
-        <h4 class="mt-4">Технически детайли</h4>
-        <div class="row g-3">
-            ${listing.year ? `
-                <div class="col-md-6">
-                    <small class="text-muted">Година на производство</small>
-                    <p class="mb-0">${listing.year}</p>
-                </div>
-            ` : ''}
-            ${listing.condition ? `
-                <div class="col-md-6">
-                    <small class="text-muted">Състояние</small>
-                    <p class="mb-0">${listing.condition}</p>
-                </div>
-            ` : ''}
-            ${listing.working !== undefined ? `
-                <div class="col-md-6">
-                    <small class="text-muted">Статус</small>
-                    <p class="mb-0">${listing.working ? '✅ Работи' : '⚠️ Не е тестирана'}</p>
-                </div>
-            ` : ''}
-        </div>
+        <hr>
+        <h4>Технически детайли</h4>
+        ${details.join('')}
     `
 }
 
@@ -210,33 +183,24 @@ function renderRelatedListings(related, category) {
         <div class="mt-5">
             <h4 class="mb-4">Още обяви в категория "${category}"</h4>
             <div class="row g-4">
-                ${related.map(listing => `
+                ${related.map(listing => {
+                    const imageUrl = (listing.images && listing.images[0]) || listing.image_url
+                    return `
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 listing-card">
-                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; font-size: 4rem;">
-                                <a href="#/listing/${listing.id}" style="text-decoration: none; color: inherit; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                                    ${listing.image || '📦'}
-                                </a>
+                        <div class="card h-100">
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
                             </div>
                             <div class="card-body">
-                                <h5 class="card-title">
-                                    <a href="#/listing/${listing.id}" style="text-decoration: none; color: inherit;">
-                                        ${listing.title}
-                                    </a>
-                                </h5>
-                                <p class="card-text text-muted small">${listing.description || 'Няма описание'}</p>
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">${listing.price || 'за разговор'}</span>
-                                    <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye"></i> Подробности
-                                    </a>
-                                </div>
+                                <h6 class="card-title">${listing.title}</h6>
+                                <p class="card-text text-muted small">${listing.location}</p>
+                                <p class="card-text fw-bold">${listing.price || 'за разговор'}</p>
+                                <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">Подробности</a>
                             </div>
                         </div>
                     </div>
-                `).join('')}
+                `
+                }).join('')}
             </div>
         </div>
     `
@@ -258,61 +222,4 @@ function formatDate(dateString) {
     return date.toLocaleDateString('bg-BG')
 }
 
-function getDemoListings() {
-    return [
-        {
-            id: 1,
-            title: 'Commodore 64',
-            description: 'Работи отлично, комплект с джойстик',
-            fullDescription: 'Перфектно функциониращ Commodore 64 с оригинална кутия и всички включени аксесоари. Включва джойстик, захранващ кабел и RF кабел. Преглед при договаряне на място.',
-            price: 'за разговор',
-            location: 'София',
-            category: 'Компютри',
-            image: '🖥️',
-            owner: 'Ivan Ivanov',
-            ownerRating: 4.8,
-            ownerListings: 5,
-            created_at: new Date(Date.now() - 2 * 60000).toISOString(),
-            views: 234,
-            year: 1982,
-            condition: 'Отлично',
-            working: true
-        },
-        {
-            id: 2,
-            title: 'Amiga 500',
-            description: 'Оригинален модел от 1987г',
-            fullDescription: 'Оригинален Amiga 500 от 1987 година. В работещо състояние. Включва монитор Commodore 1084S и всички необходими кабели. Идеално за събиране или использване.',
-            price: 'за разговор',
-            location: 'Пловдив',
-            category: 'Компютри',
-            image: '💾',
-            owner: 'Maria Georgieva',
-            ownerRating: 5.0,
-            ownerListings: 3,
-            created_at: new Date(Date.now() - 24 * 3600000).toISOString(),
-            views: 567,
-            year: 1987,
-            condition: 'Много добро',
-            working: true
-        },
-        {
-            id: 3,
-            title: 'IBM PC XT',
-            description: 'Класически компютър, всички документи',
-            fullDescription: 'Класически IBM PC XT от 80-те години. Работи с DOS и включва оригинална документация. Перфектно за ретро фанатици и събиране на старинни компютри.',
-            price: 'за разговор',
-            location: 'Варна',
-            category: 'Компютри',
-            image: '🔌',
-            owner: 'Petko Borisov',
-            ownerRating: 4.6,
-            ownerListings: 8,
-            created_at: new Date(Date.now() - 3 * 24 * 3600000).toISOString(),
-            views: 123,
-            year: 1983,
-            condition: 'Добро',
-            working: true
-        },
-    ]
-}
+

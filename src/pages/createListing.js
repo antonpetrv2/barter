@@ -205,7 +205,6 @@ async function handleCreateListing(e) {
         const listing = {
             title: formData.get('title'),
             description: formData.get('description'),
-            fullDescription: formData.get('fullDescription'),
             category: formData.get('category'),
             price: formData.get('price') || 'за разговор',
             location: formData.get('location'),
@@ -215,6 +214,8 @@ async function handleCreateListing(e) {
             images: getUploadedImages()
         }
         
+        console.log('📝 Данни на листинга:', listing)
+        
         // Validate required fields
         if (!listing.title || !listing.description || !listing.category || !listing.location) {
             throw new Error('Задължителни полета липсват')
@@ -223,12 +224,16 @@ async function handleCreateListing(e) {
         // Create listing via Supabase
         if (isSupabaseConnected()) {
             const userId = window.authState.user.id
+            console.log('👤 User ID:', userId)
+            
             const result = await listingsService.createListing({
                 ...listing,
                 user_id: userId
             })
             
-            if (result) {
+            console.log('✅ Резултат от createListing:', result)
+            
+            if (result && !result.error) {
                 // Clear uploaded images
                 clearUploadedImages()
                 

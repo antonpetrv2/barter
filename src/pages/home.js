@@ -3,7 +3,9 @@
  * Landing page with categories and featured listings
  */
 
-export function renderHome() {
+import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+
+export async function renderHome() {
     const content = document.getElementById('content')
     
     content.innerHTML = `
@@ -33,10 +35,19 @@ export function renderHome() {
                 <div class="col-12">
                     <h2 class="mb-4">Последни обяви</h2>
                 </div>
-                ${generateFeaturedListings()}
+                <div id="featured-listings">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Зареждане...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `
+    
+    // Load real listings
+    await loadFeaturedListings()
 }
 
 function generateCategories() {
@@ -63,47 +74,43 @@ function generateCategories() {
     `).join('')
 }
 
-function generateFeaturedListings() {
-    // Placeholder listings - will be replaced with real data from Supabase
-    const listings = [
-        {
-            id: 1,
-            title: 'Commodore 64',
-            price: 'за разговор',
-            location: 'София',
-            image: '🖥️'
-        },
-        {
-            id: 2,
-            title: 'Amiga 500',
-            price: 'за разговор',
-            location: 'Пловдив',
-            image: '💾'
-        },
-        {
-            id: 3,
-            title: 'IBM PC XT',
-            price: 'за разговор',
-            location: 'Варна',
-            image: '🔌'
-        },
-    ]
+function generateFeaturedListings(listings) {
+    if (!listings || listings.length === 0) {
+        return '<div class="col-12"><p class="text-muted">Няма налични обяви</p></div>'
+    }
     
-    return listings.map(listing => `
+    return listings.map(listing => {
+        const imageUrl = (listing.images && listing.images[0]) || listing.image_url
+        return `
         <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card">
-                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; font-size: 4rem;">
-                    ${listing.image}
+            <div class="card h-100">
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : '📦'}
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">${listing.title}</h5>
-                    <p class="card-text text-muted">${listing.location}</p>
+                    <p class="card-text text-muted">${listing.location || 'Неизвестно'}</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">${listing.price}</span>
+                        <span class="fw-bold">${listing.price || 'за разговор'}</span>
                         <a href="#/listing/${listing.id}" class="btn btn-sm btn-outline-primary">Повече</a>
                     </div>
                 </div>
             </div>
         </div>
-    `).join('')
+    `
+    }).join('')
+}
+
+async function loadFeaturedListings() {
+    const container = document.getElementById('featured-listings')
+    
+    if (!isSupabaseConnected()) {
+        container.innerHTML = '<div class="col-12"><p class="text-muted">Няма налични обяви</p></div>'
+        return
+    }
+    
+    const listings = await listingsService.getAllListings()
+    const featured = listings.slice(0, 3) // Show last 3 listings
+    
+    container.innerHTML = generateFeaturedListings(featured)
 }

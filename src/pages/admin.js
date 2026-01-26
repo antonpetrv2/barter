@@ -71,12 +71,23 @@ export async function renderAdmin(params) {
                         </div>
                     </div>
                 </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Обяви за одобрение</h6>
+                            <h3 class="mb-0" id="pending-listings">-</h3>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Tabs -->
             <ul class="nav nav-tabs mb-3" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-panel" type="button">Чакащи одобрение</button>
+                    <button class="nav-link active" id="pending-listings-tab" data-bs-toggle="tab" data-bs-target="#pending-listings-panel" type="button">Обяви за одобрение</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-panel" type="button">Чакащи одобрение (потребители)</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="all-users-tab" data-bs-toggle="tab" data-bs-target="#all-users-panel" type="button">Всички потребители</button>
@@ -88,8 +99,13 @@ export async function renderAdmin(params) {
 
             <!-- Tab Content -->
             <div class="tab-content">
+                <!-- Pending Listings -->
+                <div class="tab-pane fade show active" id="pending-listings-panel" role="tabpanel">
+                    <div id="pending-listings-list" class="alert alert-info">Зареждане...</div>
+                </div>
+
                 <!-- Pending Approvals -->
-                <div class="tab-pane fade show active" id="pending-panel" role="tabpanel">
+                <div class="tab-pane fade" id="pending-panel" role="tabpanel">
                     <div id="pending-list" class="alert alert-info">Зареждане...</div>
                 </div>
 
@@ -111,6 +127,7 @@ export async function renderAdmin(params) {
 
     // Load data
     await loadStatistics()
+    await loadPendingListings()
     await loadPendingUsers()
     await loadAllUsers()
     await loadBannedUsers()
@@ -130,7 +147,55 @@ async function loadStatistics() {
         document.getElementById('pending-approvals').textContent = stats.pendingApprovals
         document.getElementById('banned-users').textContent = stats.bannedUsers
         document.getElementById('active-listings').textContent = stats.activeListings
+        document.getElementById('pending-listings').textContent = stats.pendingListings
     }
+}
+
+/**
+ * Load pending listings for approval
+ */
+async function loadPendingListings() {
+    const { listings, error } = await adminService.getPendingListings()
+    const container = document.getElementById('pending-listings-list')
+
+    if (error) {
+        container.innerHTML = `<div class="alert alert-danger">Грешка при зареждане</div>`
+        return
+    }
+
+    if (!listings || listings.length === 0) {
+        container.innerHTML = `<div class="alert alert-success">Няма чакащи одобрение обяви</div>`
+        return
+    }
+
+    container.innerHTML = listings.map(listing => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 class="card-title">${listing.title}</h5>
+                        <p class="card-text">${listing.description}</p>
+                        <p class="card-text text-muted mb-2">
+                            <strong>Категория:</strong> ${listing.category} | 
+                            <strong>Локация:</strong> ${listing.location}
+                        </p>
+                        <p class="card-text text-muted mb-0">
+                            <strong>Автор:</strong> ${listing.users?.full_name || 'Неизвестен'} 
+                            (${listing.users?.email})
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-sm btn-success approve-listing-btn" data-listing-id="${listing.id}">
+                            ✓ Одобри
+                        </button>
+                        <button class="btn btn-sm btn-danger reject-listing-btn" data-listing-id="${listing.id}">
+                            ✕ Отклони
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('')
 }
 
 /**
@@ -327,6 +392,22 @@ function getStatusLabel(status) {
  * Setup event listeners for all actions
  */
 function setupEventListeners() {
+    // Approve listing buttons
+    document.querySelectorAll('.approve-listing-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.dataset.listingId
+            await approveListing(listingId)
+        })
+    })
+
+    // Reject listing buttons
+    document.querySelectorAll('.reject-listing-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.dataset.listingId
+            await rejectListing(listingId)
+        })
+    })
+
     // Approve buttons
     document.querySelectorAll('.approve-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -517,4 +598,37 @@ async function removeAdminPrivileges(userId) {
     alert('✅ Администраторските привилегии са премахнати!')
     await loadAllUsers()
     setupEventListeners()
+}
+/**
+ * Approve a listing
+ */
+async function approveListing(listingId) {
+    if (!confirm('Одобриш ли тази обява?')) return
+
+    const { error } = await adminService.approveListing(listingId)
+    if (error) {
+        alert('❌ Грешка: ' + error.message)
+        return
+    }
+
+    alert('✅ Обявата е одобрена!')
+    await loadStatistics()
+    await loadPendingListings()
+}
+
+/**
+ * Reject a listing
+ */
+async function rejectListing(listingId) {
+    if (!confirm('Сигурен ли си, че искаш да отклониш тази обява?')) return
+
+    const { error } = await adminService.rejectListing(listingId)
+    if (error) {
+        alert('❌ Грешка: ' + error.message)
+        return
+    }
+
+    alert('✅ Обявата е отклонена!')
+    await loadStatistics()
+    await loadPendingListings()
 }

@@ -43,10 +43,14 @@ export function renderNavbar() {
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </li>
-                        ` : ''}
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link" id="logout-btn">Изход</button>
+                        </li>
+                        ` : `
                         <li class="nav-item">
                             <a class="nav-link" href="#/auth">Вход / Регистрация</a>
                         </li>
+                        `}
                     </ul>
                 </div>
             </div>
@@ -91,6 +95,28 @@ export function renderNavbar() {
             refreshBtn.classList.add('spinning')
             await refreshUserProfile()
             refreshBtn.classList.remove('spinning')
+        })
+    }
+
+    // Setup logout button
+    const logoutBtn = document.getElementById('logout-btn')
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            const { error } = await authService.logout()
+            if (error) {
+                alert('❌ Грешка при изход: ' + error.message)
+                return
+            }
+            // Clear auth state
+            window.authState = {
+                user: null,
+                isLoggedIn: false,
+                isAdmin: false,
+                userStatus: null
+            }
+            console.log('✅ Успешно излязохте')
+            renderNavbar() // Refresh navbar
+            window.location.hash = '#/'
         })
     }
 }
