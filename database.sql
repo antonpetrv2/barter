@@ -42,6 +42,7 @@ CREATE TABLE listings (
     image_url TEXT,
     images JSON,
     views INTEGER DEFAULT 0,
+    deleted_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

@@ -10,8 +10,11 @@ export function renderImageUpload(containerId, options = {}) {
     if (!container) return
 
     const {
-        maxFiles = 5,
+        maxFiles = 3,
         maxSizeMB = 5,
+        maxWidth = 800,
+        maxHeight = 600,
+        quality = 0.85,
         onUpload = null,
     } = options
 
@@ -24,7 +27,8 @@ export function renderImageUpload(containerId, options = {}) {
                     <i class="bi bi-cloud-upload" style="font-size: 2rem; color: #0066cc;"></i>
                     <h5 class="mt-3">Изтегли или избери снимки</h5>
                     <p class="text-muted small">
-                        До ${maxFiles} снимки, максимум ${maxSizeMB}MB всяка
+                        До 3 снимки, макс 800x600px<br>
+                        <small>Снимките автоматично се оптимизират</small>
                     </p>
                     <input 
                         type="file" 
@@ -100,24 +104,30 @@ export function renderImageUpload(containerId, options = {}) {
     async function handleFiles(files) {
         errorDiv.style.display = 'none'
         
-        // Validate files
+        // Validate and compress files
         const validFiles = []
         const errors = []
 
         for (const file of files) {
             if (!file.type.startsWith('image/')) {
-                errors.push(`${file.name} е не снимка`)
-                continue
-            }
-            if (file.size > maxSizeBytes) {
-                errors.push(`${file.name} е твърде голям (макс ${maxSizeMB}MB)`)
+                errors.push(`${file.name} не е снимка`)
                 continue
             }
             if (window.uploadedImages.length + validFiles.length >= maxFiles) {
                 errors.push(`Максимум ${maxFiles} снимки`)
                 break
             }
-            validFiles.push(file)
+            
+            try {
+                // Compress and resize image
+                console.log(`Компресиране на ${file.name}: ${(file.size / 1024).toFixed(1)}KB...`)
+                const compressedFile = await compressImage(file, maxWidth, maxHeight, quality)
+                console.log(`✅ Компресирано: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`)
+                validFiles.push(compressedFile)
+            } catch (error) {
+                errors.push(`${file.name}: грешка при обработка`)
+                console.error('Image compression error:', error)
+            }
         }
 
         if (errors.length > 0) {
@@ -251,4 +261,65 @@ export function getUploadedImages() {
  */
 export function clearUploadedImages() {
     window.uploadedImages = []
+}
+
+/**
+ * Compress and resize image
+ */
+async function compressImage(file, maxWidth, maxHeight, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        
+        reader.onload = (e) => {
+            const img = new Image()
+            
+            img.onload = () => {
+                // Calculate new dimensions
+                let width = img.width
+                let height = img.height
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height)
+                    width = Math.floor(width * ratio)
+                    height = Math.floor(height * ratio)
+                }
+                
+                // Create canvas
+                const canvas = document.createElement('canvas')
+                canvas.width = width
+                canvas.height = height
+                
+                // Draw and compress
+                const ctx = canvas.getContext('2d')
+                ctx.drawImage(img, 0, 0, width, height)
+                
+                // Convert to blob
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            reject(new Error('Failed to compress image'))
+                            return
+                        }
+                        
+                        // Create new file from blob
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        })
+                        
+                        console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`)
+                        resolve(compressedFile)
+                    },
+                    'image/jpeg',
+                    quality
+                )
+            }
+            
+            img.onerror = () => reject(new Error('Failed to load image'))
+            img.src = e.target.result
+        }
+        
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+    })
 }

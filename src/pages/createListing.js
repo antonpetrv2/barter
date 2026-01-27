@@ -177,8 +177,10 @@ export async function renderCreateListing() {
     
     // Initialize image upload
     renderImageUpload('imageUploadContainer', {
-        maxFiles: 5,
-        maxSizeMB: 5,
+        maxFiles: 3,
+        maxWidth: 800,
+        maxHeight: 600,
+        quality: 0.85,
     })
     
     // Attach form handler

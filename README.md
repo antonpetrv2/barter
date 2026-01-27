@@ -29,6 +29,20 @@ npm run build
 npm run preview
 ```
 
+## Demo Credentials
+
+For testing the app, use the following demo account:
+
+**Regular User:**
+- Email: `demo@barter.bg`
+- Password: `demo123`
+
+**Admin User:**
+- Email: `admin@barter.bg`
+- Password: `admin123`
+
+> **Note**: These credentials work only if the Supabase database is configured and the demo users are created.
+
 ## Project Structure
 ```
 src/

@@ -4,6 +4,7 @@
  */
 
 import { listingsService, storageService, isSupabaseConnected } from '../services/supabaseService.js'
+import { renderImageUpload, getUploadedImages, clearUploadedImages } from '../components/imageUpload.js'
 
 export async function renderEditListing(params) {
     const content = document.getElementById('content')
@@ -185,14 +186,22 @@ export async function renderEditListing(params) {
                                 <div class="row mb-3">
                                     <div class="col-12">
                                         <div class="alert alert-info">
-                                            <i class="bi bi-info-circle"></i> Текуща снимка: 
-                                            ${listing.images && listing.images[0] ? `
-                                                <br><img src="${listing.images[0]}" alt="Current" style="max-width: 200px; margin-top: 10px;">
-                                            ` : 'Няма качена снимка'}
+                                            <i class="bi bi-info-circle"></i> Текущи снимки: 
+                                            ${listing.images && listing.images.length > 0 ? `
+                                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                                    ${listing.images.map((img, idx) => `
+                                                        <div class="position-relative">
+                                                            <img src="${img}" alt="Current ${idx + 1}" style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 4px;">
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            ` : 'Няма качени снимки'}
                                         </div>
-                                        <label for="image" class="form-label">Качи нова снимка (опционално)</label>
-                                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                        <small class="form-text text-muted">Остави празно, за да запазиш текущата снимка. Формати: JPG, PNG. Максимум 5MB</small>
+                                        <p class="text-muted small">
+                                            Качи нови снимки (до 3), за да замениш старите. 
+                                            Ако не качиш нови, старите ще бъдат запазени.
+                                        </p>
+                                        <div id="editImageUploadContainer"></div>
                                     </div>
                                 </div>
 
@@ -213,6 +222,21 @@ export async function renderEditListing(params) {
         </div>
     `
 
+    // Initialize existing images in the upload component
+    if (listing.images && listing.images.length > 0) {
+        window.uploadedImages = [...listing.images]
+    } else {
+        window.uploadedImages = []
+    }
+
+    // Initialize image upload component
+    renderImageUpload('editImageUploadContainer', {
+        maxFiles: 3,
+        maxWidth: 800,
+        maxHeight: 600,
+        quality: 0.85,
+    })
+
     // Handle form submission
     const form = document.getElementById('edit-listing-form')
     form.addEventListener('submit', async (e) => {
@@ -225,7 +249,7 @@ export async function renderEditListing(params) {
 
         try {
             if (!isSupabaseConnected()) {
-                throw new Error('Supabase не е свързан')
+                throw new Error('Supabase не е конфигуриран')
             }
 
             const formData = new FormData(form)
@@ -240,15 +264,11 @@ export async function renderEditListing(params) {
                 working: formData.get('working') === 'true',
             }
 
-            // Upload new image if provided
-            const imageFile = formData.get('image')
-            if (imageFile && imageFile.size > 0) {
-                const uploadResult = await storageService.uploadImage(imageFile, 'listings')
-                if (uploadResult.error) {
-                    throw new Error('Грешка при качване на снимка: ' + uploadResult.error)
-                }
-                updates.images = [uploadResult.url]
-                updates.image_url = uploadResult.url
+            // Get uploaded images
+            const uploadedImages = getUploadedImages()
+            if (uploadedImages && uploadedImages.length > 0) {
+                updates.images = uploadedImages
+                updates.image_url = uploadedImages[0]
             }
 
             // Update listing

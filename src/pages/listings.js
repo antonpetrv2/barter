@@ -74,16 +74,18 @@ export async function renderListings(params = {}) {
         </div>
     `
 
+    // Add event listeners for filters
+    attachFilterListeners(allListings)
+    
     // Apply initial category filter from query if provided
     if (params.query?.category) {
         const categoryFilter = document.getElementById('categoryFilter')
         if (categoryFilter) {
             categoryFilter.value = params.query.category
+            // Trigger filtering
+            categoryFilter.dispatchEvent(new Event('change'))
         }
     }
-
-    // Add event listeners for filters
-    attachFilterListeners(allListings)
 }
 
 function attachFilterListeners(allListings) {

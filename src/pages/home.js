@@ -9,9 +9,9 @@ export async function renderHome() {
     const content = document.getElementById('content')
     
     content.innerHTML = `
-        <div class="container py-4">
+        <div class="container py-2">
             <!-- Categories Section -->
-            <div class="row mb-4">
+            <div class="row mb-4 mt-2">
                 <div class="col-12">
                     <h4 class="mb-3">Категории</h4>
                 </div>
@@ -40,12 +40,12 @@ export async function renderHome() {
 
 function generateCategories() {
     const categories = [
-        { name: 'Компютри', icon: '🖴', path: '/listings' },
-        { name: 'Клавиатури', icon: '⌨️', path: '/listings' },
-        { name: 'Монитори', icon: '📟', path: '/listings' },
-        { name: 'Мишки', icon: '🖱️', path: '/listings' },
-        { name: 'Периферия', icon: '🖨️', path: '/listings' },
-        { name: 'Части', icon: '🎛️', path: '/listings' },
+        { name: 'Компютри', icon: 'bi-pc-display', path: '/listings' },
+        { name: 'Клавиатури', icon: 'bi-keyboard', path: '/listings' },
+        { name: 'Монитори', icon: 'bi-display', path: '/listings' },
+        { name: 'Мишки', icon: 'bi-mouse', path: '/listings' },
+        { name: 'Периферия', icon: 'bi-printer', path: '/listings' },
+        { name: 'Части', icon: 'bi-gpu-card', path: '/listings' },
     ]
     
     return categories.map(cat => `
@@ -53,7 +53,7 @@ function generateCategories() {
             <a href="#${cat.path}?category=${encodeURIComponent(cat.name)}" style="text-decoration: none; color: inherit;">
                 <div class="card text-center cursor-pointer h-100">
                     <div class="card-body py-2 px-2">
-                        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">${cat.icon}</div>
+                        <i class="bi ${cat.icon}" style="font-size: 1.5rem; margin-bottom: 0.25rem; display: block;"></i>
                         <small class="card-title">${cat.name}</small>
                     </div>
                 </div>

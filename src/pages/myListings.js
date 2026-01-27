@@ -50,31 +50,6 @@ export async function renderMyListings() {
         }
     }
     
-    // Mock user listings
-    const mockListings = [
-        {
-            id: 1,
-            title: 'Commodore 64',
-            status: 'Активна',
-            views: 234,
-            date: '2 часа назад',
-            price: 'Открит по договаряне'
-        },
-        {
-            id: 2,
-            title: 'Amiga 500',
-            status: 'Активна',
-            views: 156,
-            date: '1 день назад',
-            price: 'Открит по договаряне'
-        },
-    ]
-    
-    // Use mock if no data from Supabase
-    if (userListings.length === 0) {
-        userListings = mockListings
-    }
-    
     content.innerHTML = `
         <div class="container py-5">
             <!-- Page Title -->
@@ -85,14 +60,19 @@ export async function renderMyListings() {
                             <h1 class="display-5 fw-bold mb-2">Моите обяви</h1>
                             <p class="text-muted">${userListings.length} активни обяви</p>
                         </div>
-                        <a href="#/create-listing" class="btn btn-primary btn-lg">
-                            <i class="bi bi-plus-lg"></i> Нова обява
-                        </a>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary" id="viewTrashBtn">
+                                <i class="bi bi-trash"></i> Кошче
+                            </button>
+                            <a href="#/create-listing" class="btn btn-primary">
+                                <i class="bi bi-plus-lg"></i> Нова обява
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Listings Table -->
+            <!-- Active Listings Table -->
             <div class="row">
                 <div class="col-12">
                     <div class="card">
@@ -181,16 +161,17 @@ export async function renderMyListings() {
     deleteButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
             const listingId = e.currentTarget.getAttribute('data-listing-id')
+            const userId = window.authState.user.id
             
             if (confirm('Сигурни ли сте, че искате да изтриете тази обява?')) {
                 try {
-                    const result = await listingsService.deleteListing(listingId)
+                    const result = await listingsService.deleteListing(listingId, userId)
                     
                     if (result.error) {
-                        throw new Error(result.error)
+                        throw new Error(result.error.message || result.error)
                     }
                     
-                    alert('Обявата е изтрита успешно!')
+                            alert('✅ Обявата е преместена в кошчето!')
                     // Reload the page
                     await renderMyListings()
                 } catch (error) {
@@ -199,4 +180,146 @@ export async function renderMyListings() {
                 }
             }
         })
-    })}
+    })
+    
+    // Add event listener for trash button
+    const viewTrashBtn = document.getElementById('viewTrashBtn')
+    if (viewTrashBtn) {
+        viewTrashBtn.addEventListener('click', () => {
+            showTrashModal()
+        })
+    }
+}
+
+/**
+ * Show trash modal with deleted listings
+ */
+async function showTrashModal() {
+    const userId = window.authState.user.id
+    const deletedListings = await listingsService.getDeletedListings(userId)
+    
+    // Create modal
+    const modalHtml = `
+        <div class="modal fade" id="trashModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-trash"></i> Кошче (${deletedListings.length} обяви)
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${deletedListings.length === 0 ? `
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Кошчето е празно
+                            </div>
+                        ` : `
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Название</th>
+                                            <th>Изтрито на</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${deletedListings.map(listing => `
+                                            <tr>
+                                                <td>${listing.title}</td>
+                                                <td><small class="text-muted">${formatDeletedDate(listing.deleted_at)}</small></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-success restore-btn" data-listing-id="${listing.id}">
+                                                        <i class="bi bi-arrow-counterclockwise"></i> Възстанови
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger permanent-delete-btn" data-listing-id="${listing.id}">
+                                                        <i class="bi bi-x-circle"></i> Изтрий завинаги
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('trashModal')
+    if (existingModal) {
+        existingModal.remove()
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml)
+    
+    // Show modal using Bootstrap
+    const modalElement = document.getElementById('trashModal')
+    const modal = new bootstrap.Modal(modalElement)
+    modal.show()
+    
+    // Add event listeners
+    const restoreButtons = modalElement.querySelectorAll('.restore-btn')
+    restoreButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.getAttribute('data-listing-id')
+            
+            try {
+                const result = await listingsService.restoreListing(listingId, userId)
+                
+                if (result.error) {
+                    throw new Error(result.error.message || result.error)
+                }
+                
+                alert('✅ Обявата е възстановена!')
+                modal.hide()
+                await renderMyListings()
+            } catch (error) {
+                alert('Грешка: ' + error.message)
+            }
+        })
+    })
+    
+    const permanentDeleteButtons = modalElement.querySelectorAll('.permanent-delete-btn')
+    permanentDeleteButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.getAttribute('data-listing-id')
+            
+            if (confirm('⚠️ ВНИМАНИЕ! Обявата ще бъде изтрита ЗАВИНАГИ (включително снимките). Сигурни ли сте?')) {
+                try {
+                    const result = await listingsService.permanentlyDeleteListing(listingId, userId)
+                    
+                    if (result.error) {
+                        throw new Error(result.error.message || result.error)
+                    }
+                    
+                    alert('✅ Обявата е изтрита завинаги')
+                    modal.hide()
+                    await renderMyListings()
+                } catch (error) {
+                    alert('Грешка: ' + error.message)
+                }
+            }
+        })
+    })
+}
+
+/**
+ * Format deleted date
+ */
+function formatDeletedDate(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('bg-BG', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}

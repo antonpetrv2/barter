@@ -73,8 +73,24 @@ export async function renderListingDetail(params) {
                     <!-- Image Gallery -->
                     <div class="card mb-4">
                         <div class="bg-light d-flex align-items-center justify-content-center" style="height: 400px;">
-                            <img src="${mainImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            <img id="mainImage" src="${mainImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                         </div>
+                        ${listing.images && listing.images.length > 1 ? `
+                            <div class="card-body">
+                                <div class="d-flex gap-2 overflow-auto">
+                                    ${listing.images.map((img, idx) => `
+                                        <img 
+                                            src="${img}" 
+                                            alt="Снимка ${idx + 1}" 
+                                            class="thumbnail-img ${idx === 0 ? 'border-primary' : ''}" 
+                                            style="width: 100px; height: 100px; object-fit: cover; cursor: pointer; border: 2px solid ${idx === 0 ? '#0d6efd' : '#dee2e6'}; border-radius: 4px;"
+                                            onclick="document.getElementById('mainImage').src='${img}'; 
+                                                     document.querySelectorAll('.thumbnail-img').forEach(t => t.style.border = '2px solid #dee2e6');
+                                                     this.style.border = '2px solid #0d6efd';">
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Listing Details -->

@@ -87,12 +87,14 @@ export const authService = {
      * Logout user
      */
     async logout() {
-        if (!supabase) return
+        if (!supabase) return { error: null }
 
         try {
-            await supabase.auth.signOut()
+            const { error } = await supabase.auth.signOut()
+            return { error }
         } catch (error) {
             console.error('Logout error:', error)
+            return { error }
         }
     },
 
@@ -191,6 +193,7 @@ export const listingsService = {
                     )
                 `)
                 .eq('status', 'approved')
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false })
 
             if (error) {
@@ -253,6 +256,7 @@ export const listingsService = {
                 .from('listings')
                 .select('*')
                 .eq('user_id', userId)
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false })
 
             return error ? [] : (data || [])
@@ -306,16 +310,137 @@ export const listingsService = {
     },
 
     /**
-     * Delete listing
+     * Delete listing (soft delete)
      */
-    async deleteListing(id) {
+    async deleteListing(id, userId) {
         if (!supabase) return { error: 'Supabase не е конфигуриран' }
 
         try {
+            // First check if the listing belongs to the user
+            const { data: listing, error: fetchError } = await supabase
+                .from('listings')
+                .select('user_id')
+                .eq('id', id)
+                .single()
+
+            if (fetchError) return { error: fetchError }
+            
+            if (!listing) {
+                return { error: { message: 'Обявата не е намерена' } }
+            }
+
+            // Check ownership
+            if (listing.user_id !== userId) {
+                return { error: { message: 'Нямате право да изтриете тази обява' } }
+            }
+
+            // Soft delete: mark as deleted
+            const { error } = await supabase
+                .from('listings')
+                .update({ 
+                    deleted_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .eq('user_id', userId)
+
+            return error ? { error } : { success: true }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Restore deleted listing
+     */
+    async restoreListing(id, userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            // Check ownership
+            const { data: listing, error: fetchError } = await supabase
+                .from('listings')
+                .select('user_id')
+                .eq('id', id)
+                .single()
+
+            if (fetchError) return { error: fetchError }
+            
+            if (!listing) {
+                return { error: { message: 'Обявата не е намерена' } }
+            }
+
+            if (listing.user_id !== userId) {
+                return { error: { message: 'Нямате право да възстановите тази обява' } }
+            }
+
+            // Restore: remove deleted_at
+            const { error } = await supabase
+                .from('listings')
+                .update({ 
+                    deleted_at: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .eq('user_id', userId)
+
+            return error ? { error } : { success: true }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Get deleted listings for a user
+     */
+    async getDeletedListings(userId) {
+        if (!supabase) return []
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .select('*')
+                .eq('user_id', userId)
+                .not('deleted_at', 'is', null)
+                .order('deleted_at', { ascending: false })
+
+            return error ? [] : (data || [])
+        } catch (error) {
+            console.error('Error fetching deleted listings:', error)
+            return []
+        }
+    },
+
+    /**
+     * Permanently delete listing
+     */
+    async permanentlyDeleteListing(id, userId) {
+        if (!supabase) return { error: 'Supabase не е конфигуриран' }
+
+        try {
+            // Check ownership
+            const { data: listing, error: fetchError } = await supabase
+                .from('listings')
+                .select('user_id')
+                .eq('id', id)
+                .single()
+
+            if (fetchError) return { error: fetchError }
+            
+            if (!listing) {
+                return { error: { message: 'Обявата не е намерена' } }
+            }
+
+            if (listing.user_id !== userId) {
+                return { error: { message: 'Нямате право да изтриете тази обява' } }
+            }
+
+            // Permanent delete
             const { error } = await supabase
                 .from('listings')
                 .delete()
                 .eq('id', id)
+                .eq('user_id', userId)
 
             return error ? { error } : { success: true }
         } catch (error) {

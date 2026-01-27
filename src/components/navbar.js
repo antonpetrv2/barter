@@ -130,22 +130,31 @@ export function renderNavbar() {
     // Setup logout button
     const logoutBtn = document.getElementById('logout-btn')
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            const { error } = await authService.logout()
-            if (error) {
-                alert('❌ Грешка при изход: ' + error.message)
-                return
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault()
+            
+            try {
+                const { error } = await authService.logout()
+                if (error) {
+                    alert('❌ Грешка при изход: ' + error.message)
+                    return
+                }
+                
+                // Clear auth state
+                window.authState = {
+                    user: null,
+                    isLoggedIn: false,
+                    isAdmin: false,
+                    userStatus: null
+                }
+                
+                console.log('✅ Успешно излязохте')
+                renderNavbar() // Refresh navbar
+                window.location.hash = '#/'
+            } catch (err) {
+                console.error('Logout error:', err)
+                alert('❌ Грешка при изход')
             }
-            // Clear auth state
-            window.authState = {
-                user: null,
-                isLoggedIn: false,
-                isAdmin: false,
-                userStatus: null
-            }
-            console.log('✅ Успешно излязохте')
-            renderNavbar() // Refresh navbar
-            window.location.hash = '#/'
         })
     }
 }
