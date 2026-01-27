@@ -23,8 +23,8 @@ export async function renderHome() {
                 <div class="col-12">
                     <h4 class="mb-3">Последни обяви</h4>
                 </div>
-                <div id="featured-listings">
-                    <div class="text-center">
+                <div id="featured-listings" class="row g-3">
+                    <div class="col-12 text-center">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Зареждане...</span>
                         </div>
@@ -50,7 +50,7 @@ function generateCategories() {
     
     return categories.map(cat => `
         <div class="col-6 col-md-4 col-lg-2 mb-2">
-            <a href="#${cat.path}" style="text-decoration: none; color: inherit;">
+            <a href="#${cat.path}?category=${encodeURIComponent(cat.name)}" style="text-decoration: none; color: inherit;">
                 <div class="card text-center cursor-pointer h-100">
                     <div class="card-body py-2 px-2">
                         <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">${cat.icon}</div>

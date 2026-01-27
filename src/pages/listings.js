@@ -5,7 +5,10 @@
 
 import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
 
-export async function renderListings() {
+// Neutral gray placeholder to hint missing photo
+const placeholderImage = 'https://dummyimage.com/800x600/cfcfcf/8a8a8a&text=%D0%B1%D0%B5%D0%B7+%D1%81%D0%BD%D0%B8%D0%BC%D0%BA%D0%B0'
+
+export async function renderListings(params = {}) {
     const content = document.getElementById('content')
     
     // Show loading state
@@ -20,13 +23,12 @@ export async function renderListings() {
         </div>
     `
     
-    // Fetch listings from Supabase or use demo data
+    // Fetch listings from Supabase
     let allListings = []
-    
     if (isSupabaseConnected()) {
         allListings = await listingsService.getAllListings()
     }
-    
+
     content.innerHTML = `
         <div class="container py-5">
             <!-- Page Title -->
@@ -38,7 +40,7 @@ export async function renderListings() {
             </div>
 
             <!-- Filters and Search -->
-            <div class="row mb-4">
+            <div class="row mb-4 g-3">
                 <div class="col-md-3">
                     <input type="text" class="form-control" placeholder="Търсене по название..." id="searchInput">
                 </div>
@@ -71,7 +73,15 @@ export async function renderListings() {
             </div>
         </div>
     `
-    
+
+    // Apply initial category filter from query if provided
+    if (params.query?.category) {
+        const categoryFilter = document.getElementById('categoryFilter')
+        if (categoryFilter) {
+            categoryFilter.value = params.query.category
+        }
+    }
+
     // Add event listeners for filters
     attachFilterListeners(allListings)
 }
@@ -110,9 +120,6 @@ function attachFilterListeners(allListings) {
         updateListings()
     })
 }
-
-// Neutral gray placeholder to hint missing photo
-const placeholderImage = 'https://dummyimage.com/800x600/cfcfcf/8a8a8a&text=%D0%B1%D0%B5%D0%B7+%D1%81%D0%BD%D0%B8%D0%BC%D0%BA%D0%B0'
 
 function renderListingsGrid(listings) {
     if (listings.length === 0) {
@@ -172,12 +179,11 @@ function formatDate(dateString) {
     const now = new Date()
     const diff = now - date
     const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
     
-    if (minutes < 60) return `${minutes} мин назад`
-    if (hours < 24) return `${hours} часа назад`
-    if (days < 7) return `${days} дни назад`
-    
-    return date.toLocaleDateString('bg-BG')
+    if (minutes < 1) return 'току-що'
+    if (minutes < 60) return `${minutes} минути`
+    if (hours < 24) return `${hours} часа`
+    return `${days} дни`
 }

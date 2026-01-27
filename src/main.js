@@ -158,10 +158,11 @@ async function handleRoute() {
  * Parse route and extract parameters
  */
 function parseRoute(hash) {
-    const parts = hash.split('/').filter(p => p) // Remove empty parts
+    const [pathPart, queryString] = hash.split('?')
+    const parts = pathPart.split('/').filter(p => p) // Remove empty parts
     let pathname = '/'
     const params = {}
-    
+
     // Build pathname
     if (parts.length > 0) {
         if (parts.length === 1) {
@@ -172,6 +173,16 @@ function parseRoute(hash) {
             params.id = parts[1]
         }
     }
-    
+
+    // Parse query string if present
+    if (queryString) {
+        const query = {}
+        queryString.split('&').forEach(pair => {
+            const [key, value] = pair.split('=')
+            if (key) query[decodeURIComponent(key)] = value ? decodeURIComponent(value) : ''
+        })
+        params.query = query
+    }
+
     return [pathname, params]
 }
