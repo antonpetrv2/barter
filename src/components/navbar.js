@@ -12,7 +12,7 @@ export function renderNavbar() {
     
     navbar.innerHTML = `
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
-            <div class="container-fluid">
+            <div class="container">
                 <a class="navbar-brand fw-bold" href="#/">
                     <i class="bi bi-laptop"></i> Ретро Бартер
                 </a>
@@ -20,39 +20,39 @@ export function renderNavbar() {
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
+                    <ul class="navbar-nav ms-auto align-items-center gap-2">
                         <li class="nav-item">
-                            <a class="nav-link" href="#/">Начало</a>
+                            <a class="btn nav-btn" href="#/">Начало</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#/my-listings">Моите обяви</a>
+                            <a class="btn nav-btn" href="#/my-listings">Моите обяви</a>
                         </li>
                         ${isLoggedIn ? `
                         <li class="nav-item">
-                            <a class="btn btn-warning btn-sm" href="#/create-listing">
-                                <i class="bi bi-plus-circle"></i> Добави обява
+                            <a class="btn nav-btn nav-btn-primary" href="#/create-listing">
+                                <i class="bi bi-plus-circle me-1"></i> Добави обява
                             </a>
                         </li>
                         ` : ''}
                         ${isAdmin ? `
                         <li class="nav-item">
-                            <a class="nav-link text-danger fw-bold" href="#/admin">
-                                <i class="bi bi-shield-check"></i> Админ Панел
+                            <a class="btn nav-btn" href="#/admin">
+                                <i class="bi bi-shield-check me-1"></i> Админ Панел
                             </a>
                         </li>
                         ` : ''}
                         ${isLoggedIn ? `
                         <li class="nav-item">
-                            <button class="nav-link btn btn-link" id="refresh-profile" title="Освежи профила">
+                            <button class="btn nav-btn" id="refresh-profile" title="Освежи профила">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link btn btn-link" id="logout-btn">Изход</button>
+                            <button class="btn nav-btn" id="logout-btn">Изход</button>
                         </li>
                         ` : `
                         <li class="nav-item">
-                            <a class="nav-link" href="#/auth">Вход / Регистрация</a>
+                            <a class="btn nav-btn" href="#/auth">Вход / Регистрация</a>
                         </li>
                         `}
                     </ul>
@@ -72,20 +72,44 @@ export function renderNavbar() {
         .navbar {
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .navbar-nav .nav-link {
-            cursor: pointer;
-            transition: color 0.2s;
+        .nav-btn {
+            border: 1px solid #d9d9d9;
+            background: #ffffff;
+            color: #333;
+            border-radius: 999px;
+            padding: 0.35rem 0.85rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.1rem;
+            transition: all 0.15s ease;
         }
-        .navbar-nav .nav-link:hover {
-            color: #0066cc !important;
+        .nav-btn:hover,
+        .nav-btn:focus {
+            background: #f5f5f5;
+            color: #111;
+            border-color: #c7c7c7;
+            box-shadow: none;
         }
-        #refresh-profile {
-            border: none;
-            padding: 0.5rem !important;
-            color: #0066cc !important;
+        .nav-btn-primary {
+            background: #f6c343;
+            border-color: #f6c343;
+            color: #3a2d00;
         }
-        #refresh-profile:hover {
-            color: #0066cc !important;
+        .nav-btn-primary:hover,
+        .nav-btn-primary:focus {
+            background: #eab324;
+            border-color: #eab324;
+            color: #2c2100;
+        }
+        @media (max-width: 991px) {
+            .navbar-nav {
+                gap: 0.5rem;
+                padding-top: 0.5rem;
+            }
+            .nav-btn {
+                width: 100%;
+                text-align: left;
+            }
         }
     `
     if (!document.head.querySelector('style[data-navbar]')) {
