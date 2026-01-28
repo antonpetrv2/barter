@@ -173,8 +173,7 @@ async function handleLogin(e) {
         const { renderNavbar } = await import('../components/navbar.js')
         renderNavbar()
         
-        // Success
-        alert('✅ Успешно влизане! Профилът е активен.')
+        // Redirect to home
         window.location.hash = '#/'
     } catch (error) {
         errorDiv.textContent = error.message || 'Грешка при вход. Проверете email и парола.'
