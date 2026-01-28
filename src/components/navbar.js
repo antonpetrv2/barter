@@ -24,10 +24,10 @@ export function renderNavbar() {
                         <li class="nav-item">
                             <a class="btn nav-btn" href="#/">Начало</a>
                         </li>
+                        ${isLoggedIn ? `
                         <li class="nav-item">
                             <a class="btn nav-btn" href="#/my-listings">Моите обяви</a>
                         </li>
-                        ${isLoggedIn ? `
                         <li class="nav-item">
                             <a class="btn nav-btn nav-btn-primary" href="#/create-listing">
                                 <i class="bi bi-plus-circle me-1"></i> Добави обява

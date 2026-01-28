@@ -75,7 +75,7 @@ export function renderAuth() {
                                     <h2 class="card-title mb-4">Създай нов профил</h2>
                                     <form id="registerForm">
                                         <div class="mb-3">
-                                            <label for="registerName" class="form-label">Пълно име</label>
+                                            <label for="registerName" class="form-label">Име</label>
                                             <input type="text" class="form-control" id="registerName" placeholder="Иван Иванов" required>
                                         </div>
                                         <div class="mb-3">
@@ -109,7 +109,7 @@ export function renderAuth() {
                                         <div class="mb-3 form-check">
                                             <input type="checkbox" class="form-check-input" id="terms" required>
                                             <label class="form-check-label" for="terms">
-                                                Съглашам се с условията на ползване
+                                                Съгласявам се с <a href="#/terms" target="_blank">условията на ползване</a>
                                             </label>
                                         </div>
                                         <button type="submit" class="btn btn-primary w-100" id="registerBtn">
