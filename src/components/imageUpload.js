@@ -293,7 +293,7 @@ async function compressImage(file, maxWidth, maxHeight, quality) {
                 const ctx = canvas.getContext('2d')
                 ctx.drawImage(img, 0, 0, width, height)
                 
-                // Convert to blob
+                // Try WebP format first (better compression)
                 canvas.toBlob(
                     (blob) => {
                         if (!blob) {
@@ -301,16 +301,17 @@ async function compressImage(file, maxWidth, maxHeight, quality) {
                             return
                         }
                         
-                        // Create new file from blob
-                        const compressedFile = new File([blob], file.name, {
-                            type: 'image/jpeg',
+                        // Create new file from blob with WebP extension
+                        const fileName = file.name.replace(/\.[^.]+$/, '.webp')
+                        const compressedFile = new File([blob], fileName, {
+                            type: 'image/webp',
                             lastModified: Date.now()
                         })
                         
-                        console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB`)
+                        console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB (WebP)`)
                         resolve(compressedFile)
                     },
-                    'image/jpeg',
+                    'image/webp',
                     quality
                 )
             }
