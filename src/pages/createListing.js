@@ -93,6 +93,25 @@ export async function renderCreateListing() {
                                         <option value="Части">Части</option>
                                     </select>
                                 </div>
+
+                                <!-- Listing Type (Offering vs Looking) -->
+                                <div class="mb-4">
+                                    <label class="form-label">Какво правиш? <span class="text-danger">*</span></label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="listingType" id="offeringType" value="offering" checked required>
+                                        <label class="btn btn-outline-primary" for="offeringType">
+                                            <i class="bi bi-hand-thumbs-up"></i> Предлагам
+                                        </label>
+
+                                        <input type="radio" class="btn-check" name="listingType" id="lookingType" value="looking" required>
+                                        <label class="btn btn-outline-primary" for="lookingType">
+                                            <i class="bi bi-search"></i> Търся
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted d-block mt-2">
+                                        Избери дали предлагаш нещо за бартер или търсиш нещо
+                                    </small>
+                                </div>
                                 
                                 <!-- Parts-specific fields (shown only when category is "Части") -->
                                 <div id="partsFields" style="display: none;">
@@ -331,6 +350,7 @@ async function handleCreateListing(e) {
             title: formData.get('title'),
             description: formData.get('description'),
             category: formData.get('category'),
+            listing_type: formData.get('listingType') || 'offering',
             price: formData.get('price') || 'по договаряне',
             location: formData.get('location'),
             condition: formData.get('condition'),

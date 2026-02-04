@@ -37,15 +37,44 @@ export async function renderHome() {
                 ${generateCategories()}
             </div>
 
-            <!-- Featured Listings -->
-            <div class="row">
+            <!-- Listing Type Tabs -->
+            <div class="row mb-4">
                 <div class="col-12">
-                    <h4 class="mb-3">Последни обяви</h4>
+                    <ul class="nav nav-tabs" id="listingTypeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="offering-tab" data-bs-toggle="tab" data-bs-target="#offering-pane" type="button" role="tab" aria-controls="offering-pane" aria-selected="true" style="color: #28a745;">
+                                <span style="font-size: 1.3rem; margin-right: 0.5rem;">🔄</span> Предлагам
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="looking-tab" data-bs-toggle="tab" data-bs-target="#looking-pane" type="button" role="tab" aria-controls="looking-pane" aria-selected="false" style="color: #007bff;">
+                                <i class="bi bi-search" style="font-size: 1.3rem; margin-right: 0.5rem;"></i> Търся
+                            </button>
+                        </li>
+                    </ul>
                 </div>
-                <div id="featured-listings" class="row g-3">
-                    <div class="col-12 text-center">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Зареждане...</span>
+            </div>
+
+            <!-- Featured Listings -->
+            <div class="tab-content" id="listingTypeContent">
+                <!-- Offering Tab -->
+                <div class="tab-pane fade show active" id="offering-pane" role="tabpanel" aria-labelledby="offering-tab">
+                    <div id="offering-listings" class="row g-3">
+                        <div class="col-12 text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Зареждане...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Looking Tab -->
+                <div class="tab-pane fade" id="looking-pane" role="tabpanel" aria-labelledby="looking-tab">
+                    <div id="looking-listings" class="row g-3">
+                        <div class="col-12 text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Зареждане...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -126,16 +155,22 @@ function generateFeaturedListings(listings) {
 }
 
 async function loadFeaturedListings() {
-    const container = document.getElementById('featured-listings')
+    const offeringContainer = document.getElementById('offering-listings')
+    const lookingContainer = document.getElementById('looking-listings')
     
     if (!isSupabaseConnected()) {
-        container.innerHTML = '<div class="col-12"><p class="text-muted">Няма налични обяви</p></div>'
+        offeringContainer.innerHTML = '<div class="col-12"><p class="text-muted">Няма налични обяви</p></div>'
+        lookingContainer.innerHTML = '<div class="col-12"><p class="text-muted">Няма налични обяви</p></div>'
         return
     }
     
     const listings = await listingsService.getAllListings()
     console.log('📦 Featured listings loaded:', listings.length, listings)
-    const featured = listings.slice(0, 6) // Show last 6 listings
     
-    container.innerHTML = generateFeaturedListings(featured)
+    // Separate listings by type
+    const offeringListings = listings.filter(l => l.listing_type === 'offering' || !l.listing_type).slice(0, 6)
+    const lookingListings = listings.filter(l => l.listing_type === 'looking').slice(0, 6)
+    
+    offeringContainer.innerHTML = generateFeaturedListings(offeringListings)
+    lookingContainer.innerHTML = generateFeaturedListings(lookingListings)
 }
