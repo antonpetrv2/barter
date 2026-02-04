@@ -3,14 +3,25 @@
  * Form for creating a new listing
  */
 
-import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+import { listingsService, isSupabaseConnected, authService } from '../services/supabaseService.js'
 import { renderImageUpload, getUploadedImages, clearUploadedImages } from '../components/imageUpload.js'
 
 export async function renderCreateListing() {
     const content = document.getElementById('content')
     
+    // Show loading first
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-3">Проверка на достъп...</p>
+            </div>
+        </div>
+    `
+    
     // Check if user is logged in
-    if (!window.authState?.isLoggedIn) {
+    const user = await authService.getCurrentUser()
+    if (!user) {
         content.innerHTML = `
             <div class="container py-5">
                 <div class="alert alert-warning" role="alert">
@@ -81,6 +92,75 @@ export async function renderCreateListing() {
                                         <option value="Периферия">Периферия</option>
                                         <option value="Части">Части</option>
                                     </select>
+                                </div>
+                                
+                                <!-- Parts-specific fields (shown only when category is "Части") -->
+                                <div id="partsFields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="subcategory" class="form-label">Подкатегория</label>
+                                        <select class="form-select" id="subcategory" name="subcategory">
+                                            <option value="">Избери подкатегория...</option>
+                                            <option value="Видеокарти">Видеокарти</option>
+                                            <option value="Звукови карти">Звукови карти</option>
+                                            <option value="Лан карти">Лан карти</option>
+                                            <option value="Други">Други</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="slotType" class="form-label">Тип слот</label>
+                                            <select class="form-select" id="slotType" name="slotType">
+                                                <option value="">Избери тип слот...</option>
+                                                <option value="ISA">ISA</option>
+                                                <option value="VLB">VLB</option>
+                                                <option value="AGP">AGP</option>
+                                                <option value="PCI">PCI</option>
+                                                <option value="PCIe">PCIe</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <label for="videoStandard" class="form-label">Видеостандарт</label>
+                                            <select class="form-select" id="videoStandard" name="videoStandard">
+                                                <option value="">Избери видеостандарт...</option>
+                                                <option value="VGA">VGA</option>
+                                                <option value="CGA">CGA</option>
+                                                <option value="EGA">EGA</option>
+                                                <option value="MDA">MDA</option>
+                                                <option value="Hercules">Hercules</option>
+                                            </select>
+                                            <small class="form-text text-muted">Само за видеокарти</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Monitor-specific fields (shown only when category is "Монитори") -->
+                                <div id="monitorFields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="videoInput" class="form-label">Видеовход</label>
+                                        <select class="form-select" id="videoInput" name="videoInput">
+                                            <option value="">Избери видеовход...</option>
+                                            <option value="VGA">VGA</option>
+                                            <option value="CGA">CGA</option>
+                                            <option value="EGA">EGA</option>
+                                            <option value="MDA">MDA</option>
+                                            <option value="Hercules">Hercules</option>
+                                            <option value="Чинч">Чинч (Composite/RCA)</option>
+                                            <option value="DVI">DVI</option>
+                                            <option value="HDMI">HDMI</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Subcategory fields for Mice, Keyboards, Computers -->
+                                <div id="subcategoryOnlyFields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="subcategoryOnly" class="form-label">Подкатегория</label>
+                                        <select class="form-select" id="subcategoryOnly" name="subcategoryOnly">
+                                            <option value="">Избери подкатегория...</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <!-- Price -->
@@ -183,6 +263,49 @@ export async function renderCreateListing() {
         quality: 0.85,
     })
     
+    // Show/hide category-specific fields based on category selection
+    const categorySelect = document.getElementById('category')
+    const partsFields = document.getElementById('partsFields')
+    const monitorFields = document.getElementById('monitorFields')
+    const subcategoryOnlyFields = document.getElementById('subcategoryOnlyFields')
+    const subcategoryOnlySelect = document.getElementById('subcategoryOnly')
+    
+    const subcategoryOptions = {
+        'Мишки': ['COM/RS232', 'PS/2', 'USB'],
+        'Клавиатури': ['DIN5', 'PS/2', 'USB', 'SDL', 'Други'],
+        'Компютри': ['x86 съвместими', 'Apple II съвместими', 'MAC серия', 'Atari', 'ZX Spectrum', 'Oric', 'Amiga', 'Други']
+    }
+    
+    categorySelect.addEventListener('change', () => {
+        const category = categorySelect.value
+        
+        // Hide all first
+        partsFields.style.display = 'none'
+        monitorFields.style.display = 'none'
+        subcategoryOnlyFields.style.display = 'none'
+        
+        if (category === 'Части') {
+            partsFields.style.display = 'block'
+        } else if (category === 'Монитори') {
+            monitorFields.style.display = 'block'
+        } else if (subcategoryOptions[category]) {
+            subcategoryOnlyFields.style.display = 'block'
+            
+            // Populate options
+            subcategoryOnlySelect.innerHTML = '<option value="">Избери подкатегория...</option>'
+            subcategoryOptions[category].forEach(opt => {
+                subcategoryOnlySelect.innerHTML += `<option value="${opt}">${opt}</option>`
+            })
+        }
+        
+        // Reset all fields
+        document.getElementById('subcategory').value = ''
+        document.getElementById('slotType').value = ''
+        document.getElementById('videoStandard').value = ''
+        document.getElementById('videoInput').value = ''
+        subcategoryOnlySelect.value = ''
+    })
+    
     // Attach form handler
     const form = document.getElementById('createListingForm')
     if (form) {
@@ -216,6 +339,24 @@ async function handleCreateListing(e) {
             images: getUploadedImages()
         }
         
+        // Add parts-specific fields if category is "Части"
+        if (listing.category === 'Части') {
+            listing.subcategory = formData.get('subcategory') || null
+            listing.slot_type = formData.get('slotType') || null
+            listing.video_standard = formData.get('videoStandard') || null
+        }
+        
+        // Add monitor-specific fields if category is "Монитори"
+        if (listing.category === 'Монитори') {
+            listing.video_input = formData.get('videoInput') || null
+        }
+        
+        // Add subcategory for mice, keyboards, computers
+        const subcategoryOnlyCategories = ['Мишки', 'Клавиатури', 'Компютри']
+        if (subcategoryOnlyCategories.includes(listing.category)) {
+            listing.subcategory = formData.get('subcategoryOnly') || null
+        }
+        
         console.log('📝 Данни на листинга:', listing)
         
         // Validate required fields
@@ -225,12 +366,12 @@ async function handleCreateListing(e) {
         
         // Create listing via Supabase
         if (isSupabaseConnected()) {
-            const userId = window.authState.user.id
-            console.log('👤 User ID:', userId)
+            const currentUser = await authService.getCurrentUser()
+            console.log('👤 User ID:', currentUser.id)
             
             const result = await listingsService.createListing({
                 ...listing,
-                user_id: userId
+                user_id: currentUser.id
             })
             
             console.log('✅ Резултат от createListing:', result)

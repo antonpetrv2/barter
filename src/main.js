@@ -68,7 +68,7 @@ async function initializeApp() {
     console.log('📦 App HTML structure created')
     
     // Render static components
-    renderNavbar()
+    await renderNavbar()
     renderFooter()
     
     console.log('📦 Navbar and Footer rendered')

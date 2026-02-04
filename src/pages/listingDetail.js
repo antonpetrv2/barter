@@ -184,6 +184,24 @@ function renderTechnicalDetails(listing) {
     if (listing.condition) details.push(`<p><strong>Състояние:</strong> ${listing.condition}</p>`)
     if (listing.working !== undefined) details.push(`<p><strong>Работно състояние:</strong> ${listing.working ? 'Работи' : 'Не работи'}</p>`)
     
+    // Parts-specific fields
+    if (listing.category === 'Части') {
+        if (listing.subcategory) details.push(`<p><strong>Вид част:</strong> ${listing.subcategory}</p>`)
+        if (listing.slot_type) details.push(`<p><strong>Тип слот:</strong> ${listing.slot_type}</p>`)
+        if (listing.video_standard) details.push(`<p><strong>Видеостандарт:</strong> ${listing.video_standard}</p>`)
+    }
+    
+    // Monitor-specific fields
+    if (listing.category === 'Монитори' && listing.video_input) {
+        details.push(`<p><strong>Видеовход:</strong> ${listing.video_input}</p>`)
+    }
+    
+    // Subcategory for mice, keyboards, computers
+    const subcategoryOnlyCategories = ['Мишки', 'Клавиатури', 'Компютри']
+    if (subcategoryOnlyCategories.includes(listing.category) && listing.subcategory) {
+        details.push(`<p><strong>Тип:</strong> ${listing.subcategory}</p>`)
+    }
+    
     if (details.length === 0) return ''
     
     return `

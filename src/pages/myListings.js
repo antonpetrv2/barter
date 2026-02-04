@@ -3,15 +3,24 @@
  * User's own listings management
  */
 
-import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+import { listingsService, isSupabaseConnected, authService } from '../services/supabaseService.js'
 
 export async function renderMyListings() {
     const content = document.getElementById('content')
     
-    // Check if user is logged in
-    const isLoggedIn = window.authState?.isLoggedIn
+    // Show loading first
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-3">Проверка на достъп...</p>
+            </div>
+        </div>
+    `
     
-    if (!isLoggedIn) {
+    // Check if user is logged in
+    const user = await authService.getCurrentUser()
+    if (!user) {
         content.innerHTML = `
             <div class="container py-5">
                 <div class="alert alert-warning" role="alert">
@@ -41,10 +50,9 @@ export async function renderMyListings() {
     // Fetch user's listings from Supabase
     let userListings = []
     
-    if (isLoggedIn && isSupabaseConnected()) {
+    if (isSupabaseConnected()) {
         try {
-            const userId = window.authState.user.id
-            userListings = await listingsService.getUserListings(userId)
+            userListings = await listingsService.getUserListings(user.id)
         } catch (error) {
             console.error('Error fetching user listings:', error)
         }
@@ -161,11 +169,11 @@ export async function renderMyListings() {
     deleteButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
             const listingId = e.currentTarget.getAttribute('data-listing-id')
-            const userId = window.authState.user.id
             
             if (confirm('Сигурни ли сте, че искате да изтриете тази обява?')) {
                 try {
-                    const result = await listingsService.deleteListing(listingId, userId)
+                    const currentUser = await authService.getCurrentUser()
+                    const result = await listingsService.deleteListing(listingId, currentUser.id)
                     
                     if (result.error) {
                         throw new Error(result.error.message || result.error)
@@ -195,8 +203,8 @@ export async function renderMyListings() {
  * Show trash modal with deleted listings
  */
 async function showTrashModal() {
-    const userId = window.authState.user.id
-    const deletedListings = await listingsService.getDeletedListings(userId)
+    const currentUser = await authService.getCurrentUser()
+    const deletedListings = await listingsService.getDeletedListings(currentUser.id)
     
     // Create modal
     const modalHtml = `

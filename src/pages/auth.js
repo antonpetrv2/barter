@@ -171,7 +171,7 @@ async function handleLogin(e) {
         
         // Re-render navbar to show admin panel
         const { renderNavbar } = await import('../components/navbar.js')
-        renderNavbar()
+        await renderNavbar()
         
         // Redirect to home
         window.location.hash = '#/'
@@ -232,7 +232,7 @@ async function handleRegister(e) {
         
         // Re-render navbar to show admin panel
         const { renderNavbar } = await import('../components/navbar.js')
-        renderNavbar()
+        await renderNavbar()
         
         setTimeout(() => {
             window.location.hash = '#/'

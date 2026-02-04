@@ -5,16 +5,23 @@
 
 import { authService } from '../services/supabaseService.js'
 
-export function renderNavbar() {
+export async function renderNavbar() {
     const navbar = document.getElementById('navbar')
-    const isAdmin = window.authState?.isAdmin || false
-    const isLoggedIn = window.authState?.isLoggedIn || false
+    
+    // Check auth status
+    const user = await authService.getCurrentUser()
+    const userProfile = user ? await authService.getUserProfile(user.id) : null
+    const isLoggedIn = !!user
+    const isAdmin = userProfile?.role === 'admin'
     
     navbar.innerHTML = `
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="#/">
-                    <i class="bi bi-laptop"></i> Ретро Бартер
+                    <div>
+                        <div><i class="bi bi-laptop"></i> Ретро Бартер</div>
+                        <small class="text-muted d-none d-lg-block" style="font-size: 0.7rem; font-weight: normal;">Платформа за бартер на ретро компютри и части</small>
+                    </div>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -42,11 +49,6 @@ export function renderNavbar() {
                         </li>
                         ` : ''}
                         ${isLoggedIn ? `
-                        <li class="nav-item">
-                            <button class="btn nav-btn" id="refresh-profile" title="Освежи профила">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                        </li>
                         <li class="nav-item">
                             <button class="btn nav-btn" id="logout-btn">Изход</button>
                         </li>
@@ -117,16 +119,6 @@ export function renderNavbar() {
         document.head.appendChild(style)
     }
 
-    // Setup refresh profile button
-    const refreshBtn = document.getElementById('refresh-profile')
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            refreshBtn.classList.add('spinning')
-            await refreshUserProfile()
-            refreshBtn.classList.remove('spinning')
-        })
-    }
-
     // Setup logout button
     const logoutBtn = document.getElementById('logout-btn')
     if (logoutBtn) {
@@ -149,36 +141,12 @@ export function renderNavbar() {
                 }
                 
                 console.log('✅ Успешно излязохте')
-                renderNavbar() // Refresh navbar
+                await renderNavbar() // Refresh navbar
                 window.location.hash = '#/'
             } catch (err) {
                 console.error('Logout error:', err)
                 alert('❌ Грешка при изход')
             }
         })
-    }
-}
-
-/**
- * Refresh user profile from Supabase
- */
-async function refreshUserProfile() {
-    const user = await authService.getCurrentUser()
-    if (!user) return
-
-    const userProfile = await authService.getUserProfile(user.id)
-    if (userProfile) {
-        window.authState.user = user
-        window.authState.isLoggedIn = true
-        window.authState.isAdmin = userProfile.role === 'admin'
-        
-        console.log('✅ Профил освежен')
-        
-        if (window.authState.isAdmin) {
-            console.log('👑 Вече имате админ привилегии!')
-            alert('✅ Успешно! Вече сте администратор. Админ панелът е достъпен.')
-            // Re-render navbar to show admin panel
-            renderNavbar()
-        }
     }
 }

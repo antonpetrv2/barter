@@ -10,6 +10,25 @@ export async function renderHome() {
     
     content.innerHTML = `
         <div class="container py-2">
+            <!-- Search Section -->
+            <div class="row mb-4 mt-3">
+                <div class="col-12">
+                    <form id="homeSearchForm">
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="homeSearchInput" 
+                                placeholder="Търси компютри, клавиатури, части..."
+                                aria-label="Търсене">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search"></i> Търси
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Categories Section -->
             <div class="row mb-4 mt-2">
                 <div class="col-12">
@@ -33,6 +52,19 @@ export async function renderHome() {
             </div>
         </div>
     `
+    
+    // Setup search form handler
+    const searchForm = document.getElementById('homeSearchForm')
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault()
+        const searchInput = document.getElementById('homeSearchInput')
+        const query = searchInput.value.trim()
+        if (query) {
+            window.location.hash = `#/listings?search=${encodeURIComponent(query)}`
+        } else {
+            window.location.hash = '#/listings'
+        }
+    })
     
     // Load real listings
     await loadFeaturedListings()
@@ -102,7 +134,8 @@ async function loadFeaturedListings() {
     }
     
     const listings = await listingsService.getAllListings()
-    const featured = listings.slice(0, 3) // Show last 3 listings
+    console.log('📦 Featured listings loaded:', listings.length, listings)
+    const featured = listings.slice(0, 6) // Show last 6 listings
     
     container.innerHTML = generateFeaturedListings(featured)
 }

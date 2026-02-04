@@ -3,7 +3,7 @@
  * Edit existing listing
  */
 
-import { listingsService, storageService, isSupabaseConnected } from '../services/supabaseService.js'
+import { listingsService, storageService, isSupabaseConnected, authService } from '../services/supabaseService.js'
 import { renderImageUpload, getUploadedImages, clearUploadedImages } from '../components/imageUpload.js'
 
 export async function renderEditListing(params) {
@@ -12,10 +12,19 @@ export async function renderEditListing(params) {
     
     console.log('Edit listing called with ID:', listingId)
     
-    // Check if user is logged in
-    const isLoggedIn = window.authState?.isLoggedIn
+    // Show loading first
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-3">Проверка на достъп...</p>
+            </div>
+        </div>
+    `
     
-    if (!isLoggedIn) {
+    // Check if user is logged in
+    const user = await authService.getCurrentUser()
+    if (!user) {
         window.location.hash = '#/auth'
         return
     }
@@ -55,7 +64,7 @@ export async function renderEditListing(params) {
     }
 
     // Check if user owns this listing
-    if (listing.user_id !== window.authState.user.id) {
+    if (listing.user_id !== user.id) {
         content.innerHTML = `
             <div class="container py-5">
                 <div class="alert alert-danger">
@@ -180,6 +189,80 @@ export async function renderEditListing(params) {
                                     </div>
                                 </div>
 
+                                <!-- Parts-specific Fields -->
+                                <div id="partsFields" style="display: ${listing.category === 'Части' ? 'block' : 'none'}">
+                                    <h5 class="mb-3 mt-4">Детайли за части</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label for="subcategory" class="form-label">Вид част</label>
+                                            <select class="form-select" id="subcategory" name="subcategory">
+                                                <option value="">Избери...</option>
+                                                <option value="Видеокарти" ${listing.subcategory === 'Видеокарти' ? 'selected' : ''}>Видеокарти</option>
+                                                <option value="Звукови карти" ${listing.subcategory === 'Звукови карти' ? 'selected' : ''}>Звукови карти</option>
+                                                <option value="Лан карти" ${listing.subcategory === 'Лан карти' ? 'selected' : ''}>Лан карти</option>
+                                                <option value="Други" ${listing.subcategory === 'Други' ? 'selected' : ''}>Други</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="slotType" class="form-label">Тип слот</label>
+                                            <select class="form-select" id="slotType" name="slotType">
+                                                <option value="">Избери...</option>
+                                                <option value="ISA" ${listing.slot_type === 'ISA' ? 'selected' : ''}>ISA</option>
+                                                <option value="VLB" ${listing.slot_type === 'VLB' ? 'selected' : ''}>VLB</option>
+                                                <option value="AGP" ${listing.slot_type === 'AGP' ? 'selected' : ''}>AGP</option>
+                                                <option value="PCI" ${listing.slot_type === 'PCI' ? 'selected' : ''}>PCI</option>
+                                                <option value="PCIe" ${listing.slot_type === 'PCIe' ? 'selected' : ''}>PCIe</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="videoStandard" class="form-label">Видеостандарт</label>
+                                            <select class="form-select" id="videoStandard" name="videoStandard">
+                                                <option value="">Избери...</option>
+                                                <option value="VGA" ${listing.video_standard === 'VGA' ? 'selected' : ''}>VGA</option>
+                                                <option value="CGA" ${listing.video_standard === 'CGA' ? 'selected' : ''}>CGA</option>
+                                                <option value="EGA" ${listing.video_standard === 'EGA' ? 'selected' : ''}>EGA</option>
+                                                <option value="MDA" ${listing.video_standard === 'MDA' ? 'selected' : ''}>MDA</option>
+                                                <option value="Hercules" ${listing.video_standard === 'Hercules' ? 'selected' : ''}>Hercules</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Monitor-specific Fields -->
+                                <div id="monitorFields" style="display: ${listing.category === 'Монитори' ? 'block' : 'none'}">
+                                    <h5 class="mb-3 mt-4">Детайли за монитор</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="videoInput" class="form-label">Видеовход</label>
+                                            <select class="form-select" id="videoInput" name="videoInput">
+                                                <option value="">Избери...</option>
+                                                <option value="VGA" ${listing.video_input === 'VGA' ? 'selected' : ''}>VGA</option>
+                                                <option value="CGA" ${listing.video_input === 'CGA' ? 'selected' : ''}>CGA</option>
+                                                <option value="EGA" ${listing.video_input === 'EGA' ? 'selected' : ''}>EGA</option>
+                                                <option value="MDA" ${listing.video_input === 'MDA' ? 'selected' : ''}>MDA</option>
+                                                <option value="Hercules" ${listing.video_input === 'Hercules' ? 'selected' : ''}>Hercules</option>
+                                                <option value="Чинч" ${listing.video_input === 'Чинч' ? 'selected' : ''}>Чинч</option>
+                                                <option value="DVI" ${listing.video_input === 'DVI' ? 'selected' : ''}>DVI</option>
+                                                <option value="HDMI" ${listing.video_input === 'HDMI' ? 'selected' : ''}>HDMI</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subcategory-only Fields (Mice, Keyboards, Computers) -->
+                                <div id="subcategoryOnlyFields" style="display: ${['Мишки', 'Клавиатури', 'Компютри'].includes(listing.category) ? 'block' : 'none'}">
+                                    <h5 class="mb-3 mt-4">Подкатегория</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="subcategoryOnly" class="form-label">Тип</label>
+                                            <select class="form-select" id="subcategoryOnly" name="subcategoryOnly">
+                                                <option value="">Избери подкатегория...</option>
+                                                <!-- Options will be populated dynamically based on category -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Images Section -->
                                 <h4 class="mb-4 mt-5"><i class="bi bi-images"></i> Снимки</h4>
 
@@ -237,6 +320,58 @@ export async function renderEditListing(params) {
         quality: 0.85,
     })
 
+    // Handle category-specific fields
+    const categorySelect = document.getElementById('category')
+    const partsFields = document.getElementById('partsFields')
+    const monitorFields = document.getElementById('monitorFields')
+    const subcategoryOnlyFields = document.getElementById('subcategoryOnlyFields')
+    const subcategoryOnlySelect = document.getElementById('subcategoryOnly')
+    
+    const subcategoryOptions = {
+        'Мишки': ['COM/RS232', 'PS/2', 'USB'],
+        'Клавиатури': ['DIN5', 'PS/2', 'USB', 'SDL', 'Други'],
+        'Компютри': ['x86 съвместими', 'Apple II съвместими', 'MAC серия', 'Atari', 'ZX Spectrum', 'Oric', 'Amiga', 'Други']
+    }
+    
+    // Populate subcategoryOnly dropdown with current value if applicable
+    if (subcategoryOptions[listing.category]) {
+        subcategoryOnlySelect.innerHTML = '<option value="">Избери подкатегория...</option>'
+        subcategoryOptions[listing.category].forEach(opt => {
+            const selected = listing.subcategory === opt ? 'selected' : ''
+            subcategoryOnlySelect.innerHTML += `<option value="${opt}" ${selected}>${opt}</option>`
+        })
+    }
+    
+    categorySelect.addEventListener('change', () => {
+        const category = categorySelect.value
+        
+        // Hide all first
+        partsFields.style.display = 'none'
+        monitorFields.style.display = 'none'
+        subcategoryOnlyFields.style.display = 'none'
+        
+        if (category === 'Части') {
+            partsFields.style.display = 'block'
+        } else if (category === 'Монитори') {
+            monitorFields.style.display = 'block'
+        } else if (subcategoryOptions[category]) {
+            subcategoryOnlyFields.style.display = 'block'
+            
+            // Populate options
+            subcategoryOnlySelect.innerHTML = '<option value="">Избери подкатегория...</option>'
+            subcategoryOptions[category].forEach(opt => {
+                subcategoryOnlySelect.innerHTML += `<option value="${opt}">${opt}</option>`
+            })
+        }
+        
+        // Reset all fields when category changes
+        document.getElementById('subcategory').value = ''
+        document.getElementById('slotType').value = ''
+        document.getElementById('videoStandard').value = ''
+        document.getElementById('videoInput').value = ''
+        subcategoryOnlySelect.value = ''
+    })
+
     // Handle form submission
     const form = document.getElementById('edit-listing-form')
     form.addEventListener('submit', async (e) => {
@@ -262,6 +397,24 @@ export async function renderEditListing(params) {
                 condition: formData.get('condition'),
                 year: formData.get('year') ? parseInt(formData.get('year')) : null,
                 working: formData.get('working') === 'true',
+            }
+
+            // Add parts-specific fields if category is "Части"
+            if (updates.category === 'Части') {
+                updates.subcategory = formData.get('subcategory') || null
+                updates.slot_type = formData.get('slotType') || null
+                updates.video_standard = formData.get('videoStandard') || null
+            }
+            
+            // Add monitor-specific fields if category is "Монитори"
+            if (updates.category === 'Монитори') {
+                updates.video_input = formData.get('videoInput') || null
+            }
+            
+            // Add subcategory for mice, keyboards, computers
+            const subcategoryOnlyCategories = ['Мишки', 'Клавиатури', 'Компютри']
+            if (subcategoryOnlyCategories.includes(updates.category)) {
+                updates.subcategory = formData.get('subcategoryOnly') || null
             }
 
             // Get uploaded images

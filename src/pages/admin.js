@@ -3,10 +3,21 @@
  * Manage users, approvals, bans, and system statistics
  */
 
-import { adminService, authService } from '../services/supabaseService.js'
+import { adminService, authService, listingsService, storageService } from '../services/supabaseService.js'
+import JSZip from 'jszip'
 
 export async function renderAdmin(params) {
     const content = document.getElementById('content')
+    
+    // Show loading first
+    content.innerHTML = `
+        <div class="container py-5">
+            <div class="text-center">
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-3">Проверка на достъп...</p>
+            </div>
+        </div>
+    `
     
     // Check if user is admin
     const user = await authService.getCurrentUser()
@@ -95,6 +106,9 @@ export async function renderAdmin(params) {
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="banned-tab" data-bs-toggle="tab" data-bs-target="#banned-panel" type="button">Блокирани</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="import-export-tab" data-bs-toggle="tab" data-bs-target="#import-export-panel" type="button">Import/Export</button>
+                </li>
             </ul>
 
             <!-- Tab Content -->
@@ -120,6 +134,49 @@ export async function renderAdmin(params) {
                 <!-- Banned Users -->
                 <div class="tab-pane fade" id="banned-panel" role="tabpanel">
                     <div id="banned-list" class="alert alert-info">Зареждане...</div>
+                </div>
+
+                <!-- Import/Export -->
+                <div class="tab-pane fade" id="import-export-panel" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-download"></i> Експорт на обяви</h5>
+                                    <p class="text-muted">Експортирай всички твои обяви в ZIP архив с JSON + снимки</p>
+                                    <button id="export-listings-btn" class="btn btn-primary">
+                                        <i class="bi bi-file-earmark-arrow-down"></i> Експортирай обяви
+                                    </button>
+                                    <div id="export-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-upload"></i> Импорт на обяви</h5>
+                                    <p class="text-muted">Импортирай обяви от ZIP архив (JSON + снимки)</p>
+                                    <div class="mb-3">
+                                        <input type="file" class="form-control" id="import-file" accept=".zip">
+                                    </div>
+                                    <button id="import-listings-btn" class="btn btn-success">
+                                        <i class="bi bi-file-earmark-arrow-up"></i> Импортирай обяви
+                                    </button>
+                                    <div id="import-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">📋 Инструкции:</h6>
+                        <ul class="mb-0">
+                            <li>Експортът създава ZIP архив с JSON файл + всички снимки</li>
+                            <li>Импортът чете ZIP файл и качва снимките в storage</li>
+                            <li><strong>⚠️ Импортът създава НОВИ обяви - ще има дублиране ако обявите вече съществуват!</strong></li>
+                            <li>Всички импортирани обяви чакат одобрение от администратор</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -475,6 +532,18 @@ function setupEventListeners() {
             setupEventListeners()
         })
     }
+
+    // Export listings button
+    const exportBtn = document.getElementById('export-listings-btn')
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportListings)
+    }
+
+    // Import listings button
+    const importBtn = document.getElementById('import-listings-btn')
+    if (importBtn) {
+        importBtn.addEventListener('click', importListings)
+    }
 }
 
 /**
@@ -631,4 +700,266 @@ async function rejectListing(listingId) {
     alert('✅ Обявата е отклонена!')
     await loadStatistics()
     await loadPendingListings()
+}
+
+/**
+ * Export all user's listings to JSON with images in ZIP
+ */
+async function exportListings() {
+    const exportBtn = document.getElementById('export-listings-btn')
+    const exportStatus = document.getElementById('export-status')
+    
+    try {
+        exportBtn.disabled = true
+        exportStatus.innerHTML = '<div class="alert alert-info">Експортиране...</div>'
+        
+        // Get current user's listings
+        const user = await authService.getCurrentUser()
+        const listings = await listingsService.getUserListings(user.id)
+        
+        if (!listings || listings.length === 0) {
+            exportStatus.innerHTML = '<div class="alert alert-warning">Няма обяви за експорт</div>'
+            exportBtn.disabled = false
+            return
+        }
+        
+        // Create ZIP file
+        const zip = new JSZip()
+        
+        // Create export data
+        const exportData = {
+            version: '1.0',
+            exportDate: new Date().toISOString(),
+            userId: user.id,
+            listingsCount: listings.length,
+            listings: listings
+        }
+        
+        // Add JSON file
+        zip.file('listings.json', JSON.stringify(exportData, null, 2))
+        
+        // Download all images
+        const imagesFolder = zip.folder('images')
+        let imageCount = 0
+        
+        for (let i = 0; i < listings.length; i++) {
+            const listing = listings[i]
+            if (listing.images && listing.images.length > 0) {
+                exportStatus.innerHTML = `<div class="alert alert-info">Изтегляне на снимки... (${i + 1}/${listings.length})</div>`
+                
+                for (let j = 0; j < listing.images.length; j++) {
+                    const imageUrl = listing.images[j]
+                    try {
+                        // Fetch image as blob
+                        const response = await fetch(imageUrl)
+                        const blob = await response.blob()
+                        
+                        // Extract filename or create one
+                        const urlParts = imageUrl.split('/')
+                        const filename = urlParts[urlParts.length - 1] || `listing-${listing.id}-image-${j}.webp`
+                        
+                        imagesFolder.file(filename, blob)
+                        imageCount++
+                    } catch (err) {
+                        console.error(`Failed to download image ${imageUrl}:`, err)
+                    }
+                }
+            }
+        }
+        
+        exportStatus.innerHTML = '<div class="alert alert-info">Създаване на ZIP архив...</div>'
+        
+        // Generate ZIP file
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        
+        // Download ZIP file
+        const url = URL.createObjectURL(zipBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `barter-listings-export-${new Date().toISOString().split('T')[0]}.zip`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+        exportStatus.innerHTML = `<div class="alert alert-success">✅ Експортирани ${listings.length} обяви и ${imageCount} снимки успешно!</div>`
+        
+    } catch (error) {
+        console.error('Export error:', error)
+        exportStatus.innerHTML = `<div class="alert alert-danger">❌ Грешка: ${error.message}</div>`
+    } finally {
+        exportBtn.disabled = false
+    }
+}
+
+/**
+ * Import listings from ZIP file with images
+ */
+async function importListings() {
+    const fileInput = document.getElementById('import-file')
+    const importBtn = document.getElementById('import-listings-btn')
+    const importStatus = document.getElementById('import-status')
+    
+    const file = fileInput.files[0]
+    if (!file) {
+        importStatus.innerHTML = '<div class="alert alert-warning">Моля избери ZIP файл за импорт</div>'
+        return
+    }
+    
+    if (!file.name.endsWith('.zip')) {
+        importStatus.innerHTML = '<div class="alert alert-danger">Моля избери ZIP файл (не JSON)</div>'
+        return
+    }
+    
+    try {
+        importBtn.disabled = true
+        importStatus.innerHTML = '<div class="alert alert-info">Четене на ZIP файл...</div>'
+        
+        // Read ZIP file
+        const zip = new JSZip()
+        const zipContent = await zip.loadAsync(file)
+        
+        // Read JSON file
+        const jsonFile = zipContent.file('listings.json')
+        if (!jsonFile) {
+            throw new Error('Липсва listings.json във файла')
+        }
+        
+        const jsonText = await jsonFile.async('text')
+        const importData = JSON.parse(jsonText)
+        
+        // Validate format
+        if (!importData.version || !importData.listings || !Array.isArray(importData.listings)) {
+            throw new Error('Невалиден формат на файла')
+        }
+        
+        const user = await authService.getCurrentUser()
+        let successCount = 0
+        let errorCount = 0
+        let duplicateCount = 0
+        
+        // Get images folder
+        const imagesFolder = zipContent.folder('images')
+        const imageFiles = {}
+        
+        if (imagesFolder) {
+            imagesFolder.forEach((relativePath, file) => {
+                imageFiles[relativePath] = file
+            })
+        }
+        
+        importStatus.innerHTML = `<div class="alert alert-info">⚠️ ВНИМАНИЕ: Ще се създадат ${importData.listings.length} НОВИ обяви. 
+        Ако вече имаш тези обяви, ще се дублират!<br><br>
+        <button id="confirm-import-btn" class="btn btn-warning">Продължи с импорта</button>
+        <button id="cancel-import-btn" class="btn btn-secondary">Отказ</button></div>`
+        
+        // Wait for confirmation
+        const confirmed = await new Promise((resolve) => {
+            document.getElementById('confirm-import-btn').addEventListener('click', () => resolve(true))
+            document.getElementById('cancel-import-btn').addEventListener('click', () => resolve(false))
+        })
+        
+        if (!confirmed) {
+            importStatus.innerHTML = '<div class="alert alert-info">Импортът е отменен</div>'
+            importBtn.disabled = false
+            return
+        }
+        
+        // Import each listing
+        for (let i = 0; i < importData.listings.length; i++) {
+            const listing = importData.listings[i]
+            
+            try {
+                importStatus.innerHTML = `<div class="alert alert-info">Импортиране на обява ${i + 1}/${importData.listings.length}...</div>`
+                
+                // Upload images from ZIP
+                const uploadedImageUrls = []
+                
+                if (listing.images && listing.images.length > 0) {
+                    for (const oldImageUrl of listing.images) {
+                        // Extract filename from old URL
+                        const urlParts = oldImageUrl.split('/')
+                        const filename = urlParts[urlParts.length - 1]
+                        
+                        // Find image in ZIP
+                        const imageFile = imageFiles[filename]
+                        if (imageFile) {
+                            try {
+                                const imageBlob = await imageFile.async('blob')
+                                const file = new File([imageBlob], filename, { type: imageBlob.type || 'image/webp' })
+                                
+                                // Upload to Supabase storage
+                                const { url, error } = await storageService.uploadImage(file, 'listings')
+                                
+                                if (url) {
+                                    uploadedImageUrls.push(url)
+                                } else if (error) {
+                                    console.error(`Upload error for ${filename}:`, error)
+                                }
+                            } catch (err) {
+                                console.error(`Failed to upload image ${filename}:`, err)
+                            }
+                        } else {
+                            console.warn(`Image ${filename} not found in ZIP`)
+                        }
+                    }
+                }
+                
+                // Prepare listing data
+                const newListing = {
+                    user_id: user.id,
+                    title: listing.title,
+                    description: listing.description,
+                    category: listing.category,
+                    price: listing.price,
+                    location: listing.location,
+                    condition: listing.condition,
+                    year: listing.year,
+                    working: listing.working,
+                    images: uploadedImageUrls.length > 0 ? uploadedImageUrls : [],
+                    subcategory: listing.subcategory || null,
+                    slot_type: listing.slot_type || null,
+                    video_standard: listing.video_standard || null,
+                    video_input: listing.video_input || null
+                }
+                
+                console.log('Creating listing:', newListing)
+                
+                // Create listing using service
+                const result = await listingsService.createListing(newListing)
+                
+                console.log('Create result:', result)
+                
+                if (result.error) {
+                    console.error('Create listing error:', result.error)
+                    throw result.error
+                }
+                successCount++
+                
+            } catch (err) {
+                console.error('Error importing listing:', listing.title, err)
+                errorCount++
+            }
+        }
+        
+        // Show results
+        let message = `<div class="alert alert-success">✅ Импортирани успешно: ${successCount}</div>`
+        if (errorCount > 0) {
+            message += `<div class="alert alert-warning">⚠️ Грешки при импорт: ${errorCount}</div>`
+        }
+        importStatus.innerHTML = message
+        
+        // Reload statistics
+        await loadStatistics()
+        await loadPendingListings()
+        
+        // Clear file input
+        fileInput.value = ''
+        
+    } catch (error) {
+        console.error('Import error:', error)
+        importStatus.innerHTML = `<div class="alert alert-danger">❌ Грешка: ${error.message}</div>`
+    } finally {
+        importBtn.disabled = false
+    }
 }
