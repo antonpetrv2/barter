@@ -3,7 +3,7 @@
  * Displays the main navigation for the app
  */
 
-import { authService } from '../services/supabaseService.js'
+import { authService, messageService } from '../services/supabaseService.js'
 
 export async function renderNavbar() {
     const navbar = document.getElementById('navbar')
@@ -13,6 +13,9 @@ export async function renderNavbar() {
     const userProfile = user ? await authService.getUserProfile(user.id) : null
     const isLoggedIn = !!user
     const isAdmin = userProfile?.role === 'admin'
+    const { count: unreadCount } = isLoggedIn
+        ? await messageService.getUnreadCount(user.id)
+        : { count: 0 }
     
     navbar.innerHTML = `
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
@@ -38,6 +41,7 @@ export async function renderNavbar() {
                         <li class="nav-item">
                             <a class="btn nav-btn" href="#/messages">
                                 <i class="bi bi-envelope me-1"></i> Мои съобщения
+                                ${unreadCount > 0 ? `<span class="badge rounded-pill bg-danger ms-1">${unreadCount}</span>` : ''}
                             </a>
                         </li>
                         <li class="nav-item">

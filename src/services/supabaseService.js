@@ -232,9 +232,148 @@ export const messageService = {
                     read: false,
                 }])
 
+            if (error) return { error }
+
+            await supabase
+                .from('message_conversations')
+                .upsert([
+                    {
+                        user_id: senderId,
+                        counterparty_id: receiverId,
+                        archived: false,
+                        updated_at: new Date().toISOString(),
+                    },
+                    {
+                        user_id: receiverId,
+                        counterparty_id: senderId,
+                        archived: false,
+                        updated_at: new Date().toISOString(),
+                    }
+                ])
+
+            return { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Get all messages for a user (inbox + sent)
+     */
+    async getUserMessages(userId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' }, messages: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select(`
+                    id,
+                    sender_id,
+                    receiver_id,
+                    listing_id,
+                    message,
+                    read,
+                    created_at,
+                    sender:users!messages_sender_id_fkey (
+                        id,
+                        full_name,
+                        email
+                    ),
+                    receiver:users!messages_receiver_id_fkey (
+                        id,
+                        full_name,
+                        email
+                    ),
+                    listings (
+                        id,
+                        title
+                    )
+                `)
+                .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+                .order('created_at', { ascending: false })
+
+            return error ? { error, messages: [] } : { messages: data || [] }
+        } catch (error) {
+            return { error, messages: [] }
+        }
+    },
+
+    /**
+     * Get archive states for conversation counterparts
+     */
+    async getConversationStates(userId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' }, states: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('message_conversations')
+                .select('counterparty_id, archived, updated_at')
+                .eq('user_id', userId)
+
+            return error ? { error, states: [] } : { states: data || [] }
+        } catch (error) {
+            return { error, states: [] }
+        }
+    },
+
+    /**
+     * Archive/unarchive a conversation for current user
+     */
+    async setConversationArchived(userId, counterpartyId, archived) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' } }
+
+        try {
+            const { data, error } = await supabase
+                .from('message_conversations')
+                .upsert({
+                    user_id: userId,
+                    counterparty_id: counterpartyId,
+                    archived,
+                    updated_at: new Date().toISOString(),
+                })
+
             return error ? { error } : { data }
         } catch (error) {
             return { error }
+        }
+    },
+
+    /**
+     * Mark all incoming messages in a conversation as read
+     */
+    async markConversationRead(userId, counterpartyId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' } }
+
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .update({ read: true })
+                .eq('receiver_id', userId)
+                .eq('sender_id', counterpartyId)
+                .eq('read', false)
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Get unread messages count for current user
+     */
+    async getUnreadCount(userId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' }, count: 0 }
+
+        try {
+            const { count, error } = await supabase
+                .from('messages')
+                .select('id', { count: 'exact', head: true })
+                .eq('receiver_id', userId)
+                .eq('read', false)
+
+            return error ? { error, count: 0 } : { count: count || 0 }
+        } catch (error) {
+            return { error, count: 0 }
         }
     },
 
@@ -594,7 +733,10 @@ export const listingsService = {
         if (!supabase) return
 
         try {
-            await supabase.rpc('increment_views', { listing_id: id })
+            const { error } = await supabase.rpc('increment_views', { p_listing_id: id })
+            if (error) {
+                console.error('Error incrementing views (rpc):', error)
+            }
         } catch (error) {
             console.error('Error incrementing views:', error)
         }

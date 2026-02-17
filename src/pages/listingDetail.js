@@ -43,6 +43,11 @@ export async function renderListingDetail(params) {
         return
     }
 
+    if (isSupabaseConnected() && listing.id) {
+        await listingsService.incrementViews(listing.id)
+        listing.views = (listing.views || 0) + 1
+    }
+
     let relatedListings = []
     if (isSupabaseConnected()) {
         const allListings = await listingsService.getAllListings()

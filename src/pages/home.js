@@ -138,10 +138,16 @@ function generateFeaturedListings(listings) {
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100">
                 <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
-                    <img src="${displayImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                    <a href="#/listing/${listing.id}" style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; text-decoration: none;">
+                        <img src="${displayImage}" alt="${listing.title}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                    </a>
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">${listing.title}</h5>
+                    <h5 class="card-title">
+                        <a href="#/listing/${listing.id}" class="home-listing-title-link" style="text-decoration: none; color: inherit;">
+                            ${listing.title}
+                        </a>
+                    </h5>
                     <p class="card-text text-muted">${listing.location || 'Неизвестно'}</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fw-bold">${formatListingPrice(listing.price)}</span>
@@ -173,6 +179,18 @@ function formatListingPrice(priceValue) {
     }
 
     return `Цена: ${priceValue}`
+}
+
+if (!document.head.querySelector('style[data-home-listing-links]')) {
+    const style = document.createElement('style')
+    style.setAttribute('data-home-listing-links', 'true')
+    style.textContent = `
+        .home-listing-title-link:hover,
+        .home-listing-title-link:focus {
+            text-decoration: underline !important;
+        }
+    `
+    document.head.appendChild(style)
 }
 
 async function loadFeaturedListings() {
