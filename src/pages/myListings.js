@@ -4,6 +4,7 @@
  */
 
 import { listingsService, isSupabaseConnected, authService } from '../services/supabaseService.js'
+import { formatBgDate, formatBgDateTime } from '../utils/dateFormat.js'
 
 export async function renderMyListings() {
     const content = document.getElementById('content')
@@ -91,7 +92,7 @@ export async function renderMyListings() {
                                         <th>Название</th>
                                         <th>Статус</th>
                                         <th>Преглеждания</th>
-                                        <th>Постав</th>
+                                        <th>Публикувана</th>
                                         <th>Действия</th>
                                     </tr>
                                 </thead>
@@ -112,7 +113,7 @@ export async function renderMyListings() {
                                                 <i class="bi bi-eye"></i> ${listing.views}
                                             </td>
                                             <td>
-                                                <small class="text-muted">${listing.date}</small>
+                                                <small class="text-muted">${formatBgDate(listing.created_at)}</small>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
@@ -236,7 +237,7 @@ async function showTrashModal() {
                                         ${deletedListings.map(listing => `
                                             <tr>
                                                 <td>${listing.title}</td>
-                                                <td><small class="text-muted">${formatDeletedDate(listing.deleted_at)}</small></td>
+                                                <td><small class="text-muted">${formatBgDateTime(listing.deleted_at)}</small></td>
                                                 <td>
                                                     <button class="btn btn-sm btn-success restore-btn" data-listing-id="${listing.id}">
                                                         <i class="bi bi-arrow-counterclockwise"></i> Възстанови
@@ -317,17 +318,3 @@ async function showTrashModal() {
     })
 }
 
-/**
- * Format deleted date
- */
-function formatDeletedDate(dateString) {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString('bg-BG', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
-}

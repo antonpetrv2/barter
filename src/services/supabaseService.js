@@ -40,22 +40,16 @@ export const authService = {
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                        phone,
+                        city,
+                    },
+                },
             })
 
             if (error) return { error }
-
-            // Create user profile
-            if (data.user) {
-                await supabase.from('users').insert([{
-                    id: data.user.id,
-                    email,
-                    full_name: fullName,
-                    phone,
-                    city,
-                    rating: 5.0,
-                    created_at: new Date().toISOString(),
-                }])
-            }
 
             return { data }
         } catch (error) {
@@ -171,6 +165,53 @@ export const authService = {
 }
 
 /**
+ * App Settings Service
+ */
+export const settingsService = {
+    /**
+     * Get auto-approve toggle for new listings
+     */
+    async getAutoApproveListings() {
+        if (!supabase) return true
+
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value_json')
+                .eq('key', 'auto_approve_listings')
+                .single()
+
+            if (error || !data?.value_json) return true
+
+            return data.value_json.enabled !== false
+        } catch (error) {
+            return true
+        }
+    },
+
+    /**
+     * Update auto-approve toggle for new listings (admin only)
+     */
+    async setAutoApproveListings(enabled) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' } }
+
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .upsert({
+                    key: 'auto_approve_listings',
+                    value_json: { enabled },
+                    updated_at: new Date().toISOString(),
+                })
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+}
+
+/**
  * Listings Service
  */
 export const listingsService = {
@@ -273,11 +314,13 @@ export const listingsService = {
         if (!supabase) return { error: 'Supabase не е конфигуриран' }
 
         try {
+            const autoApproveEnabled = await settingsService.getAutoApproveListings()
+
             const { data, error } = await supabase
                 .from('listings')
                 .insert([{
                     ...listing,
-                    status: 'pending',
+                    status: autoApproveEnabled ? 'approved' : 'pending',
                     created_at: new Date().toISOString(),
                     views: 0,
                 }])
@@ -701,6 +744,33 @@ export const adminService = {
                     )
                 `)
                 .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+
+            return error ? { error, listings: [] } : { listings: data || [] }
+        } catch (error) {
+            return { error, listings: [] }
+        }
+    },
+
+    /**
+     * Get all listings for moderation (admin)
+     */
+    async getAllListingsForAdmin() {
+        if (!supabase) return { error: 'Supabase не е конфигуриран', listings: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('listings')
+                .select(`
+                    *,
+                    users (
+                        id,
+                        full_name,
+                        email,
+                        phone
+                    )
+                `)
+                .is('deleted_at', null)
                 .order('created_at', { ascending: false })
 
             return error ? { error, listings: [] } : { listings: data || [] }

@@ -101,6 +101,22 @@ export function renderContact() {
             </div>
         </div>
     `
+
+    try {
+        const prefillRaw = sessionStorage.getItem('contactPrefill')
+        if (prefillRaw) {
+            const prefill = JSON.parse(prefillRaw)
+            if (prefill?.subject) {
+                document.getElementById('subject').value = prefill.subject
+            }
+            if (prefill?.message) {
+                document.getElementById('message').value = prefill.message
+            }
+            sessionStorage.removeItem('contactPrefill')
+        }
+    } catch (error) {
+        sessionStorage.removeItem('contactPrefill')
+    }
     
     // Generate random math captcha
     let captchaNum1, captchaNum2, captchaAnswer

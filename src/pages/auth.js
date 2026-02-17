@@ -47,7 +47,17 @@ export function renderAuth() {
                                         </div>
                                         <div class="mb-3">
                                             <label for="loginPassword" class="form-label">Парола</label>
-                                            <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+                                                <button
+                                                    class="btn btn-outline-secondary toggle-password"
+                                                    type="button"
+                                                    data-target="loginPassword"
+                                                    aria-label="Покажи парола"
+                                                >
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="mb-3 form-check">
                                             <input type="checkbox" class="form-check-input" id="rememberMe">
@@ -100,11 +110,31 @@ export function renderAuth() {
                                         </div>
                                         <div class="mb-3">
                                             <label for="registerPassword" class="form-label">Парола</label>
-                                            <input type="password" class="form-control" id="registerPassword" placeholder="••••••••" required>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="registerPassword" placeholder="••••••••" required>
+                                                <button
+                                                    class="btn btn-outline-secondary toggle-password"
+                                                    type="button"
+                                                    data-target="registerPassword"
+                                                    aria-label="Покажи парола"
+                                                >
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="mb-3">
                                             <label for="registerPasswordConfirm" class="form-label">Повтори парола</label>
-                                            <input type="password" class="form-control" id="registerPasswordConfirm" placeholder="••••••••" required>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="registerPasswordConfirm" placeholder="••••••••" required>
+                                                <button
+                                                    class="btn btn-outline-secondary toggle-password"
+                                                    type="button"
+                                                    data-target="registerPasswordConfirm"
+                                                    aria-label="Покажи парола"
+                                                >
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div class="mb-3 form-check">
                                             <input type="checkbox" class="form-check-input" id="terms" required>
@@ -134,6 +164,7 @@ export function renderAuth() {
 function attachAuthListeners() {
     const loginForm = document.getElementById('loginForm')
     const registerForm = document.getElementById('registerForm')
+    const passwordToggleButtons = document.querySelectorAll('.toggle-password')
     
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin)
@@ -141,6 +172,24 @@ function attachAuthListeners() {
     
     if (registerForm) {
         registerForm.addEventListener('submit', handleRegister)
+    }
+
+    if (passwordToggleButtons.length > 0) {
+        passwordToggleButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target
+                const targetInput = document.getElementById(targetId)
+
+                if (!targetInput) return
+
+                const isPassword = targetInput.type === 'password'
+                targetInput.type = isPassword ? 'text' : 'password'
+                button.setAttribute('aria-label', isPassword ? 'Скрий парола' : 'Покажи парола')
+                button.innerHTML = isPassword
+                    ? '<i class="bi bi-eye-slash"></i>'
+                    : '<i class="bi bi-eye"></i>'
+            })
+        })
     }
 }
 

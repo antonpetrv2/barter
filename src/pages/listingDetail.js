@@ -151,9 +151,10 @@ export async function renderListingDetail(params) {
                             </div>
 
                             <button class="btn btn-primary w-100 mb-2">
+                            <button class="btn btn-primary w-100 mb-2" id="sendMessageBtn">
                                 <i class="bi bi-chat-left"></i> Изпрати съобщение
                             </button>
-                            <button class="btn btn-outline-secondary w-100">
+                            <button class="btn btn-outline-secondary w-100" id="reportListingBtn">
                                 <i class="bi bi-exclamation-circle"></i> Докладване
                             </button>
                         </div>
@@ -163,18 +164,70 @@ export async function renderListingDetail(params) {
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title mb-3">Споделяне</h5>
-                            <button class="btn btn-light w-100 mb-2">📱 WhatsApp</button>
-                            <button class="btn btn-light w-100 mb-2">📧 Имейл</button>
-                            <button class="btn btn-light w-100">🔗 Копирай линк</button>
+                            <button class="btn btn-light w-100" id="copyLinkBtn">🔗 Копирай линк</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Related Listings -->
-            ${renderRelatedListings(relatedListings, listing.category)}
+            ${renderRelatedListings(relatedListings, listing.category, placeholderImage)}
         </div>
     `
+
+    const listingUrl = `${window.location.origin}${window.location.pathname}#/listing/${listing.id}`
+
+    const sendMessageBtn = document.getElementById('sendMessageBtn')
+    if (sendMessageBtn) {
+        sendMessageBtn.addEventListener('click', () => {
+            const prefill = {
+                subject: `Запитване за обява: ${listing.title}`,
+                message: `Здравейте,\n\nИнтересувам се от обявата \"${listing.title}\".\nЛинк: ${listingUrl}\n\nПоздрави,`
+            }
+            sessionStorage.setItem('contactPrefill', JSON.stringify(prefill))
+            window.location.hash = '#/contact'
+        })
+    }
+
+    const reportListingBtn = document.getElementById('reportListingBtn')
+    if (reportListingBtn) {
+        reportListingBtn.addEventListener('click', () => {
+            const prefill = {
+                subject: `Доклад за обява #${listing.id}`,
+                message: `Здравейте,\n\nИскам да докладвам нередност за следната обява:\nЗаглавие: ${listing.title}\nЛинк: ${listingUrl}\n\nПричина:`
+            }
+            sessionStorage.setItem('contactPrefill', JSON.stringify(prefill))
+            window.location.hash = '#/contact'
+        })
+    }
+
+    const copyLinkBtn = document.getElementById('copyLinkBtn')
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', async () => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(listingUrl)
+                } else {
+                    const tempInput = document.createElement('textarea')
+                    tempInput.value = listingUrl
+                    tempInput.style.position = 'fixed'
+                    tempInput.style.opacity = '0'
+                    document.body.appendChild(tempInput)
+                    tempInput.focus()
+                    tempInput.select()
+                    document.execCommand('copy')
+                    document.body.removeChild(tempInput)
+                }
+
+                copyLinkBtn.textContent = '✅ Линкът е копиран'
+                setTimeout(() => {
+                    copyLinkBtn.textContent = '🔗 Копирай линк'
+                }, 1500)
+            } catch (error) {
+                alert('Неуспешно копиране на линка. Копирай ръчно от адресната лента.')
+            }
+        })
+    }
 }
 
 function renderTechnicalDetails(listing) {
@@ -211,7 +264,7 @@ function renderTechnicalDetails(listing) {
     `
 }
 
-function renderRelatedListings(related, category) {
+function renderRelatedListings(related, category, placeholderImage) {
     if (related.length === 0) {
         return ''
     }

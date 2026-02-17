@@ -387,6 +387,9 @@ async function handleCreateListing(e) {
         // Create listing via Supabase
         if (isSupabaseConnected()) {
             const currentUser = await authService.getCurrentUser()
+            if (!currentUser?.id) {
+                throw new Error('Трябва да сте влезли в профила си')
+            }
             console.log('👤 User ID:', currentUser.id)
             
             const result = await listingsService.createListing({
@@ -408,7 +411,8 @@ async function handleCreateListing(e) {
                     window.location.hash = '#/my-listings'
                 }, 2000)
             } else {
-                throw new Error('Грешка при създаване на обява')
+                const backendMessage = result?.error?.message
+                throw new Error(backendMessage || 'Грешка при създаване на обява')
             }
         } else {
             // For demo mode without Supabase

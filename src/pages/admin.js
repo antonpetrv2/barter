@@ -3,8 +3,11 @@
  * Manage users, approvals, bans, and system statistics
  */
 
-import { adminService, authService, listingsService, storageService } from '../services/supabaseService.js'
+import { adminService, authService, listingsService, settingsService, storageService } from '../services/supabaseService.js'
+import { formatBgDate } from '../utils/dateFormat.js'
 import JSZip from 'jszip'
+
+let isAutoApproveListingsEnabled = true
 
 export async function renderAdmin(params) {
     const content = document.getElementById('content')
@@ -37,6 +40,21 @@ export async function renderAdmin(params) {
         return
     }
 
+    const showNakovWelcome = userProfile.email === 'demo@barter.bg' ||
+        (userProfile.full_name || '').toLowerCase().includes('наков')
+
+    const nakovWelcomeHtml = showNakovWelcome
+        ? `
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info mb-0" role="alert">
+                        Добре дошъл г-н Наков, приятно прекарване на нашия сайт
+                    </div>
+                </div>
+            </div>
+        `
+        : ''
+
     // Show admin panel
     content.innerHTML = `
         <div class="container-fluid py-4">
@@ -47,6 +65,8 @@ export async function renderAdmin(params) {
                     <p class="text-muted">Управление на потребители и система</p>
                 </div>
             </div>
+
+            ${nakovWelcomeHtml}
 
             <!-- Statistics Dashboard -->
             <div id="statistics" class="row mb-4">
@@ -92,10 +112,30 @@ export async function renderAdmin(params) {
                 </div>
             </div>
 
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div>
+                                <h6 class="mb-1">Одобрение на нови обяви</h6>
+                                <p class="text-muted mb-0" id="listing-approval-description">Зареждане на настройката...</p>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="listing-approval-toggle">
+                                <label class="form-check-label" for="listing-approval-toggle" id="listing-approval-label">-</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabs -->
             <ul class="nav nav-tabs mb-3" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="pending-listings-tab" data-bs-toggle="tab" data-bs-target="#pending-listings-panel" type="button">Обяви за одобрение</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="all-listings-tab" data-bs-toggle="tab" data-bs-target="#all-listings-panel" type="button">Всички обяви</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-panel" type="button">Чакащи одобрение (потребители)</button>
@@ -116,6 +156,10 @@ export async function renderAdmin(params) {
                 <!-- Pending Listings -->
                 <div class="tab-pane fade show active" id="pending-listings-panel" role="tabpanel">
                     <div id="pending-listings-list" class="alert alert-info">Зареждане...</div>
+                </div>
+
+                <div class="tab-pane fade" id="all-listings-panel" role="tabpanel">
+                    <div id="all-listings-list" class="alert alert-info">Зареждане...</div>
                 </div>
 
                 <!-- Pending Approvals -->
@@ -183,8 +227,10 @@ export async function renderAdmin(params) {
     `
 
     // Load data
+    await loadListingApprovalSetting()
     await loadStatistics()
     await loadPendingListings()
+    await loadAllListingsForAdmin()
     await loadPendingUsers()
     await loadAllUsers()
     await loadBannedUsers()
@@ -215,17 +261,23 @@ async function loadPendingListings() {
     const { listings, error } = await adminService.getPendingListings()
     const container = document.getElementById('pending-listings-list')
 
+    container.innerHTML = ''
+
+    if (isAutoApproveListingsEnabled) {
+        container.innerHTML += `<div class="alert alert-info mb-3">Одобрението е изключено. Новите обяви се публикуват директно.</div>`
+    }
+
     if (error) {
-        container.innerHTML = `<div class="alert alert-danger">Грешка при зареждане</div>`
+        container.innerHTML += `<div class="alert alert-danger">Грешка при зареждане</div>`
         return
     }
 
     if (!listings || listings.length === 0) {
-        container.innerHTML = `<div class="alert alert-success">Няма чакащи одобрение обяви</div>`
+        container.innerHTML += `<div class="alert alert-success">Няма чакащи одобрение обяви</div>`
         return
     }
 
-    container.innerHTML = listings.map(listing => `
+    container.innerHTML += listings.map(listing => `
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row">
@@ -240,6 +292,9 @@ async function loadPendingListings() {
                             <strong>Автор:</strong> ${listing.users?.full_name || 'Неизвестен'} 
                             (${listing.users?.email})
                         </p>
+                        <p class="card-text text-muted mb-0">
+                            <strong>Публикувана:</strong> ${formatBgDate(listing.created_at)}
+                        </p>
                     </div>
                     <div class="col-md-4 text-md-end">
                         <button class="btn btn-sm btn-success approve-listing-btn" data-listing-id="${listing.id}">
@@ -253,6 +308,89 @@ async function loadPendingListings() {
             </div>
         </div>
     `).join('')
+}
+
+/**
+ * Load all listings for admin moderation
+ */
+async function loadAllListingsForAdmin() {
+    const { listings, error } = await adminService.getAllListingsForAdmin()
+    const container = document.getElementById('all-listings-list')
+
+    if (!container) return
+
+    if (error) {
+        container.innerHTML = `<div class="alert alert-danger">Грешка при зареждане на всички обяви</div>`
+        return
+    }
+
+    if (!listings || listings.length === 0) {
+        container.innerHTML = `<div class="alert alert-info">Няма обяви</div>`
+        return
+    }
+
+    container.innerHTML = listings.map(listing => {
+        const statusClass = getStatusBadgeClass(listing.status)
+        const statusLabel = getStatusLabel(listing.status)
+
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <h5 class="card-title mb-0">${listing.title}</h5>
+                                <span class="badge ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <p class="card-text">${listing.description || ''}</p>
+                            <p class="card-text text-muted mb-2">
+                                <strong>Категория:</strong> ${listing.category || 'N/A'} |
+                                <strong>Локация:</strong> ${listing.location || 'N/A'}
+                            </p>
+                            <p class="card-text text-muted mb-0">
+                                <strong>Автор:</strong> ${listing.users?.full_name || 'Неизвестен'} (${listing.users?.email || 'N/A'})
+                            </p>
+                            <p class="card-text text-muted mb-0">
+                                <strong>Публикувана:</strong> ${formatBgDate(listing.created_at)}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end d-flex flex-column gap-2 align-items-md-end mt-3 mt-md-0">
+                            ${listing.status !== 'approved'
+                                ? `<button class="btn btn-sm btn-success approve-listing-btn" data-listing-id="${listing.id}">✓ Одобри</button>`
+                                : `<button class="btn btn-sm btn-warning reject-listing-btn" data-listing-id="${listing.id}">⏸ Спри</button>`
+                            }
+                            ${listing.status === 'approved'
+                                ? ''
+                                : `<button class="btn btn-sm btn-danger reject-listing-btn" data-listing-id="${listing.id}">✕ Отклони</button>`
+                            }
+                            <button class="btn btn-sm btn-outline-danger delete-listing-btn" data-listing-id="${listing.id}">
+                                <i class="bi bi-trash"></i> Изтрий
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+    }).join('')
+}
+
+async function loadListingApprovalSetting() {
+    const toggle = document.getElementById('listing-approval-toggle')
+    const label = document.getElementById('listing-approval-label')
+    const description = document.getElementById('listing-approval-description')
+
+    if (!toggle || !label || !description) return
+
+    isAutoApproveListingsEnabled = await settingsService.getAutoApproveListings()
+    toggle.checked = isAutoApproveListingsEnabled
+
+    if (isAutoApproveListingsEnabled) {
+        label.textContent = 'Автоматично публикуване: ВКЛ.'
+        description.textContent = 'Новите обяви се публикуват веднага без ръчно одобрение.'
+    } else {
+        label.textContent = 'Ръчно одобрение: ВКЛ.'
+        description.textContent = 'Новите обяви чакат потвърждение от администратор.'
+    }
 }
 
 /**
@@ -340,7 +478,7 @@ async function loadBannedUsers() {
                         <h5 class="card-title">${user.full_name || user.email}</h5>
                         <p class="card-text text-muted mb-2">Email: ${user.email}</p>
                         <p class="card-text text-muted mb-2">Причина: ${user.ban_reason || 'Не е посочена'}</p>
-                        <p class="card-text text-muted mb-0">Блокиран на: ${new Date(user.banned_at).toLocaleDateString('bg-BG')}</p>
+                        <p class="card-text text-muted mb-0">Блокиран на: ${formatBgDate(user.banned_at)}</p>
                     </div>
                     <div class="col-md-4 text-md-end">
                         <button class="btn btn-sm btn-warning unban-btn" data-user-id="${user.id}">
@@ -465,6 +603,14 @@ function setupEventListeners() {
         })
     })
 
+    // Delete listing buttons
+    document.querySelectorAll('.delete-listing-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const listingId = e.currentTarget.dataset.listingId
+            await deleteListingByAdmin(listingId)
+        })
+    })
+
     // Approve buttons
     document.querySelectorAll('.approve-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -543,6 +689,25 @@ function setupEventListeners() {
     const importBtn = document.getElementById('import-listings-btn')
     if (importBtn) {
         importBtn.addEventListener('click', importListings)
+    }
+
+    const listingApprovalToggle = document.getElementById('listing-approval-toggle')
+    if (listingApprovalToggle) {
+        listingApprovalToggle.addEventListener('change', async (e) => {
+            const enabled = e.target.checked
+            const { error } = await settingsService.setAutoApproveListings(enabled)
+
+            if (error) {
+                alert('Грешка при запазване на настройката: ' + (error.message || 'Неуспешна операция'))
+                e.target.checked = !enabled
+                return
+            }
+
+            isAutoApproveListingsEnabled = enabled
+            await loadListingApprovalSetting()
+            await loadPendingListings()
+            await loadStatistics()
+        })
     }
 }
 
@@ -683,6 +848,8 @@ async function approveListing(listingId) {
     alert('✅ Обявата е одобрена!')
     await loadStatistics()
     await loadPendingListings()
+    await loadAllListingsForAdmin()
+    setupEventListeners()
 }
 
 /**
@@ -700,6 +867,27 @@ async function rejectListing(listingId) {
     alert('✅ Обявата е отклонена!')
     await loadStatistics()
     await loadPendingListings()
+    await loadAllListingsForAdmin()
+    setupEventListeners()
+}
+
+/**
+ * Delete listing as admin
+ */
+async function deleteListingByAdmin(listingId) {
+    if (!confirm('⚠️ Сигурен ли си, че искаш да изтриеш тази обява?')) return
+
+    const { error } = await adminService.deleteListing(listingId)
+    if (error) {
+        alert('❌ Грешка: ' + error.message)
+        return
+    }
+
+    alert('✅ Обявата е изтрита!')
+    await loadStatistics()
+    await loadPendingListings()
+    await loadAllListingsForAdmin()
+    setupEventListeners()
 }
 
 /**
