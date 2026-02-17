@@ -144,7 +144,7 @@ function generateFeaturedListings(listings) {
                     <h5 class="card-title">${listing.title}</h5>
                     <p class="card-text text-muted">${listing.location || 'Неизвестно'}</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">${listing.price || 'по договаряне'}</span>
+                        <span class="fw-bold">${formatListingPrice(listing.price)}</span>
                         <a href="#/listing/${listing.id}" class="btn btn-sm btn-outline-primary">Повече</a>
                     </div>
                 </div>
@@ -152,6 +152,27 @@ function generateFeaturedListings(listings) {
         </div>
     `
     }).join('')
+}
+
+function formatListingPrice(priceValue) {
+    const exchangeRate = 1.95583
+
+    if (priceValue === null || priceValue === undefined || priceValue === '') {
+        return 'Цена: по договаряне'
+    }
+
+    const normalized = String(priceValue).trim().replace(',', '.')
+    const numericPrice = Number(normalized)
+
+    if (Number.isFinite(numericPrice)) {
+        const euroText = Number.isInteger(numericPrice)
+            ? numericPrice.toString()
+            : numericPrice.toFixed(2)
+        const levaText = (numericPrice * exchangeRate).toFixed(2)
+        return `Цена: ${euroText} € (${levaText} лв)`
+    }
+
+    return `Цена: ${priceValue}`
 }
 
 async function loadFeaturedListings() {

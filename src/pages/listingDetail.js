@@ -3,7 +3,7 @@
  * Display detailed view of a single listing
  */
 
-import { listingsService, isSupabaseConnected } from '../services/supabaseService.js'
+import { listingsService, isSupabaseConnected, authService, messageService } from '../services/supabaseService.js'
 
 export async function renderListingDetail(params) {
     const content = document.getElementById('content')
@@ -105,7 +105,7 @@ export async function renderListingDetail(params) {
                                     <p class="text-muted"><i class="bi bi-eye"></i> ${listing.views || 0} прегледа</p>
                                 </div>
                                 <div class="col-md-6 text-md-end">
-                                    <p class="fs-4 fw-bold text-primary">${listing.price || 'по договаряне'}</p>
+                                    <p class="fs-4 fw-bold text-primary">${formatListingPrice(listing.price)}</p>
                                 </div>
                             </div>
 
@@ -150,7 +150,6 @@ export async function renderListingDetail(params) {
                                 <p>${ownerPhone}</p>
                             </div>
 
-                            <button class="btn btn-primary w-100 mb-2">
                             <button class="btn btn-primary w-100 mb-2" id="sendMessageBtn">
                                 <i class="bi bi-chat-left"></i> Изпрати съобщение
                             </button>
@@ -179,13 +178,46 @@ export async function renderListingDetail(params) {
 
     const sendMessageBtn = document.getElementById('sendMessageBtn')
     if (sendMessageBtn) {
-        sendMessageBtn.addEventListener('click', () => {
-            const prefill = {
-                subject: `Запитване за обява: ${listing.title}`,
-                message: `Здравейте,\n\nИнтересувам се от обявата \"${listing.title}\".\nЛинк: ${listingUrl}\n\nПоздрави,`
+        sendMessageBtn.addEventListener('click', async () => {
+            if (!isSupabaseConnected()) {
+                alert('Системата за съобщения временно не е налична.')
+                return
             }
-            sessionStorage.setItem('contactPrefill', JSON.stringify(prefill))
-            window.location.hash = '#/contact'
+
+            const currentUser = await authService.getCurrentUser()
+            if (!currentUser) {
+                alert('Трябва да влезеш в профила си, за да изпратиш съобщение.')
+                window.location.hash = '#/auth'
+                return
+            }
+
+            if (currentUser.id === listing.user_id) {
+                alert('Това е твоя обява.')
+                return
+            }
+
+            const text = prompt('Въведи съобщение до продавача:')
+            if (text === null) return
+
+            const trimmed = text.trim()
+            if (!trimmed) {
+                alert('Съобщението не може да е празно.')
+                return
+            }
+
+            const { error } = await messageService.sendMessage({
+                senderId: currentUser.id,
+                receiverId: listing.user_id,
+                listingId: listing.id,
+                message: trimmed,
+            })
+
+            if (error) {
+                alert('Грешка при изпращане: ' + (error.message || 'Неуспешна операция'))
+                return
+            }
+
+            alert('✅ Съобщението е изпратено.')
         })
     }
 
@@ -284,7 +316,7 @@ function renderRelatedListings(related, category, placeholderImage) {
                             <div class="card-body">
                                 <h6 class="card-title">${listing.title}</h6>
                                 <p class="card-text text-muted small">${listing.location}</p>
-                                <p class="card-text fw-bold">${listing.price || 'по договаряне'}</p>
+                                <p class="card-text fw-bold">${formatListingPrice(listing.price)}</p>
                                 <a href="#/listing/${listing.id}" class="btn btn-sm btn-primary">Подробности</a>
                             </div>
                         </div>
@@ -310,6 +342,27 @@ function formatDate(dateString) {
     if (days < 7) return `${days} дни назад`
     
     return date.toLocaleDateString('bg-BG')
+}
+
+function formatListingPrice(priceValue) {
+    const exchangeRate = 1.95583
+
+    if (priceValue === null || priceValue === undefined || priceValue === '') {
+        return 'Цена: по договаряне'
+    }
+
+    const normalized = String(priceValue).trim().replace(',', '.')
+    const numericPrice = Number(normalized)
+
+    if (Number.isFinite(numericPrice)) {
+        const euroText = Number.isInteger(numericPrice)
+            ? numericPrice.toString()
+            : numericPrice.toFixed(2)
+        const levaText = (numericPrice * exchangeRate).toFixed(2)
+        return `Цена: ${euroText} € (${levaText} лв)`
+    }
+
+    return `Цена: ${priceValue}`
 }
 
 

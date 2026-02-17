@@ -136,32 +136,6 @@ export async function renderMyListings() {
                     </div>
                 </div>
             </div>
-
-            <!-- Create Listing Card -->
-            <div class="row mt-5">
-                <div class="col-md-6">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="card-title">Създай нова обява</h3>
-                            <p class="card-text text-muted">Публикувай своите ретро компютри и части</p>
-                            <button class="btn btn-primary">
-                                <i class="bi bi-plus-lg"></i> Начало
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h3 class="card-title">Мои съобщения</h3>
-                            <p class="card-text text-muted">Вижте съобщенията от другите потребители</p>
-                            <button class="btn btn-secondary">
-                                <i class="bi bi-envelope"></i> Съобщения
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     `
 

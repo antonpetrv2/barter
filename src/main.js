@@ -16,6 +16,7 @@ import { renderCreateListing } from './pages/createListing.js'
 import { renderEditListing } from './pages/editListing.js'
 import { renderAdmin } from './pages/admin.js'
 import { renderContact } from './pages/contact.js'
+import { renderMessages } from './pages/messages.js'
 import { renderTerms } from './pages/terms.js'
 
 // Component imports
@@ -43,6 +44,7 @@ const routes = {
     '/edit-listing/:id': renderEditListing,
     '/admin': renderAdmin,
     '/contact': renderContact,
+    '/messages': renderMessages,
     '/terms': renderTerms,
 }
 

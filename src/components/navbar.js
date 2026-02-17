@@ -36,6 +36,11 @@ export async function renderNavbar() {
                             <a class="btn nav-btn" href="#/my-listings">Моите обяви</a>
                         </li>
                         <li class="nav-item">
+                            <a class="btn nav-btn" href="#/messages">
+                                <i class="bi bi-envelope me-1"></i> Мои съобщения
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="btn nav-btn nav-btn-primary" href="#/create-listing">
                                 <i class="bi bi-plus-circle me-1"></i> Добави обява
                             </a>

@@ -212,6 +212,102 @@ export const settingsService = {
 }
 
 /**
+ * Messages Service
+ */
+export const messageService = {
+    /**
+     * Send message to another user
+     */
+    async sendMessage({ senderId, receiverId, listingId, message }) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' } }
+
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .insert([{
+                    sender_id: senderId,
+                    receiver_id: receiverId,
+                    listing_id: listingId,
+                    message,
+                    read: false,
+                }])
+
+            return error ? { error } : { data }
+        } catch (error) {
+            return { error }
+        }
+    },
+
+    /**
+     * Get inbox messages for a user
+     */
+    async getInboxMessages(userId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' }, messages: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select(`
+                    id,
+                    message,
+                    read,
+                    created_at,
+                    sender_id,
+                    listing_id,
+                    users!messages_sender_id_fkey (
+                        full_name,
+                        email
+                    ),
+                    listings (
+                        id,
+                        title
+                    )
+                `)
+                .eq('receiver_id', userId)
+                .order('created_at', { ascending: false })
+
+            return error ? { error, messages: [] } : { messages: data || [] }
+        } catch (error) {
+            return { error, messages: [] }
+        }
+    },
+
+    /**
+     * Get sent messages for a user
+     */
+    async getSentMessages(userId) {
+        if (!supabase) return { error: { message: 'Supabase не е конфигуриран' }, messages: [] }
+
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select(`
+                    id,
+                    message,
+                    read,
+                    created_at,
+                    receiver_id,
+                    listing_id,
+                    users!messages_receiver_id_fkey (
+                        full_name,
+                        email
+                    ),
+                    listings (
+                        id,
+                        title
+                    )
+                `)
+                .eq('sender_id', userId)
+                .order('created_at', { ascending: false })
+
+            return error ? { error, messages: [] } : { messages: data || [] }
+        } catch (error) {
+            return { error, messages: [] }
+        }
+    },
+}
+
+/**
  * Listings Service
  */
 export const listingsService = {
